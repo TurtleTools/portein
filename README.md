@@ -34,7 +34,6 @@ pip install .
 
 ## Customization
 - Use the `PorteinConfig` object to modify plotting colors, line widths etc.
-- Use the returned fig and ax objects to modify the final figure.
 ```python
 from portein import plot_portrait, PorteinConfig
 config = PorteinConfig.default()
@@ -44,7 +43,6 @@ config.sheet.opacity = 0.5
 fig, ax, points = plot_portrait("7lc2", config)
 ```
 ![custom config](7lc2_custom_config.png)
-
 - Use the returned points array to highlight specific residues.
 ```python
 from portein import plot_portrait, PorteinConfig
@@ -54,6 +52,8 @@ highlight_residues = [1, 5, 19, 40, 250]
 ax.scatter(points[highlight_residues, 0], points[highlight_residues, 1], color="black", size=50)
 ```
 ![highlight points](7lc2_highlight.png)
+- Use the returned fig and ax objects to modify the final figure.
+
 
 <a name="2dprojection">1</a>: https://stackoverflow.com/a/2970340 - Optimal rotation of 3D model for 2D projection
 
