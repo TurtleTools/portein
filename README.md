@@ -49,7 +49,9 @@ from portein import plot_portrait, PorteinConfig
 config = PorteinConfig.default()
 fig, ax, points = plot_portrait("7lc2", config)
 highlight_residues = [1, 5, 19, 40, 250]
-ax.scatter(points[highlight_residues, 0], points[highlight_residues, 1], color="black", size=50)
+ax.scatter(points[highlight_residues, 0], points[highlight_residues, 1],
+           color="red", s=100, 
+           edgecolor="black", linewidth=2)
 ```
 ![highlight points](7lc2_highlight.png)
 - Use the returned fig and ax objects to modify the final figure.
