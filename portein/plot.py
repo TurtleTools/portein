@@ -10,13 +10,21 @@ from pathlib import Path
 from portein.config import HelixConfig, TurnConfig, SheetConfig, PorteinConfig
 from portein.rotate import find_best_projection, rotate_to_maximize_bb_height
 
-SS_DICT = {'H': 'H', 'G': 'H', 'I': 'H',
-           'B': 'E', 'E': 'E',
-           'T': 'T', 'S': 'T',
-           'C': 'T'}
+SS_DICT = {
+    "H": "H",
+    "G": "H",
+    "I": "H",
+    "B": "E",
+    "E": "E",
+    "T": "T",
+    "S": "T",
+    "C": "T",
+}
 
 
-def plot_portrait(pdb: ty.Union[str, Path, pd.AtomGroup], config: PorteinConfig, height=12):
+def plot_portrait(
+    pdb: ty.Union[str, Path, pd.AtomGroup], config: PorteinConfig, height=12
+):
     """
     Plot 2D portrait of a protein
 
@@ -47,7 +55,7 @@ def plot_portrait(pdb: ty.Union[str, Path, pd.AtomGroup], config: PorteinConfig,
     ss_list = structure_alpha.getSecstrs()
     ss_elements = get_ss_elements(ss_list)
     fig, ax = plt.subplots(1, figsize=find_size(coords, height))
-    plt.axis('off')
+    plt.axis("off")
     min_x, min_y, max_x, max_y = np.inf, np.inf, -np.inf, -np.inf
     for (ss, start_i, end_i) in ss_elements:
         if ss == "H":
@@ -57,7 +65,9 @@ def plot_portrait(pdb: ty.Union[str, Path, pd.AtomGroup], config: PorteinConfig,
                 ss = "HW"
         start_x, start_y = coords[start_i, 0], coords[start_i, 1]
         end_x, end_y = coords[end_i, 0], coords[end_i, 1]
-        min_x, min_y, max_x, max_y = update_limits(start_x, start_y, end_x, end_y, min_x, min_y, max_x, max_y)
+        min_x, min_y, max_x, max_y = update_limits(
+            start_x, start_y, end_x, end_y, min_x, min_y, max_x, max_y
+        )
         for patch in make_patch(ss, start_x, start_y, end_x, end_y, ax, config):
             ax.add_patch(patch)
     ax.set_xlim(min_x - 1, max_x + 1)
@@ -72,14 +82,19 @@ def make_helix_wave(config: HelixConfig, length):
     start_theta, end_theta = 0, 180
     for arc_start in np.arange(0, length, config.wave_arc_length):
         origin = (arc_start + 0.25, 0)
-        patches.append(m_patches.Arc(origin,
-                                     config.wave_arc_length,
-                                     config.wave_arc_height,
-                                     linewidth=config.wave_arc_width,
-                                     # Add a bit to each angle to avoid sharp cuts
-                                     # that show as white lines in plot
-                                     theta1=start_theta - 1, theta2=end_theta + 1,
-                                     edgecolor=config.color))
+        patches.append(
+            m_patches.Arc(
+                origin,
+                config.wave_arc_length,
+                config.wave_arc_height,
+                linewidth=config.wave_arc_width,
+                # Add a bit to each angle to avoid sharp cuts
+                # that show as white lines in plot
+                theta1=start_theta - 1,
+                theta2=end_theta + 1,
+                edgecolor=config.color,
+            )
+        )
         start_theta += 180
         end_theta += 180
     return patches
@@ -90,58 +105,98 @@ def make_helix_cylinder(config: HelixConfig, length):
     # Origin is *center* of ellipse
     origin = (config.cylinder_ellipse_length / 2, 0)
     # First ellipse
-    patches.append(m_patches.Ellipse(origin,
-                                     config.cylinder_ellipse_length,
-                                     config.cylinder_ellipse_height,
-                                     linewidth=config.outline_width,
-                                     edgecolor=config.outline_color,
-                                     facecolor=config.color,
-                                     alpha=config.opacity))
+    patches.append(
+        m_patches.Ellipse(
+            origin,
+            config.cylinder_ellipse_length,
+            config.cylinder_ellipse_height,
+            linewidth=config.outline_width,
+            edgecolor=config.outline_color,
+            facecolor=config.color,
+            alpha=config.opacity,
+        )
+    )
 
     # Rectangle(s)
-    origin = (config.cylinder_ellipse_length / 2, -config.cylinder_ellipse_height / 2)  # origin is lower left: make it v-cntr
-    patches.append(m_patches.Rectangle(origin, length - config.cylinder_ellipse_length, config.cylinder_rectangle_height,
-                                       edgecolor=config.outline_color,
-                                       facecolor=config.color, linewidth=config.outline_width,
-                                       alpha=config.opacity))
+    origin = (
+        config.cylinder_ellipse_length / 2,
+        -config.cylinder_ellipse_height / 2,
+    )  # origin is lower left: make it v-cntr
+    patches.append(
+        m_patches.Rectangle(
+            origin,
+            length - config.cylinder_ellipse_length,
+            config.cylinder_rectangle_height,
+            edgecolor=config.outline_color,
+            facecolor=config.color,
+            linewidth=config.outline_width,
+            alpha=config.opacity,
+        )
+    )
 
     # Second ellipse
     origin = (length - config.cylinder_ellipse_length / 2, 0)
-    patches.append(m_patches.Ellipse(origin,
-                                     config.cylinder_ellipse_length,
-                                     config.cylinder_ellipse_height,
-                                     linewidth=config.outline_width,
-                                     edgecolor=config.outline_color,
-                                     facecolor=config.color,
-                                     alpha=config.opacity))
+    patches.append(
+        m_patches.Ellipse(
+            origin,
+            config.cylinder_ellipse_length,
+            config.cylinder_ellipse_height,
+            linewidth=config.outline_width,
+            edgecolor=config.outline_color,
+            facecolor=config.color,
+            alpha=config.opacity,
+        )
+    )
     return patches
 
 
 def make_sheet(config: SheetConfig, length):
-    return [m_patches.FancyArrow(0, 0,  # x, y of tail
-                                 length, 0,  # dx, dy=0 -> flat arrow
-                                 length_includes_head=True,
-                                 head_length=length / 4,
-                                 head_width=config.head_height - 0.001,
-                                 width=config.tail_height,
-                                 facecolor=config.color,
-                                 edgecolor=config.outline_color,
-                                 linewidth=config.outline_width,
-                                 alpha=config.opacity)]
+    return [
+        m_patches.FancyArrow(
+            0,
+            0,  # x, y of tail
+            length,
+            0,  # dx, dy=0 -> flat arrow
+            length_includes_head=True,
+            head_length=length / 4,
+            head_width=config.head_height - 0.001,
+            width=config.tail_height,
+            facecolor=config.color,
+            edgecolor=config.outline_color,
+            linewidth=config.outline_width,
+            alpha=config.opacity,
+        )
+    ]
 
 
 def make_turn(config: TurnConfig, length):
     origin = (length / 2, config.height / 2)
-    return [m_patches.Circle((0, 0), config.circle_radius, color=config.circle_color, alpha=config.opacity),
-            m_patches.Arc(origin,
-                          length,
-                          config.height,
-                          linewidth=config.arc_width,
-                          # Add a bit to each angle to avoid sharp cuts
-                          # that show as white lines in plot
-                          theta1=0, theta2=180,
-                          edgecolor=config.arc_color, alpha=config.opacity),
-            m_patches.Circle((length, 0), config.circle_radius, color=config.circle_color, alpha=config.opacity)]
+    return [
+        m_patches.Circle(
+            (0, 0),
+            config.circle_radius,
+            color=config.circle_color,
+            alpha=config.opacity,
+        ),
+        m_patches.Arc(
+            origin,
+            length,
+            config.height,
+            linewidth=config.arc_width,
+            # Add a bit to each angle to avoid sharp cuts
+            # that show as white lines in plot
+            theta1=0,
+            theta2=180,
+            edgecolor=config.arc_color,
+            alpha=config.opacity,
+        ),
+        m_patches.Circle(
+            (length, 0),
+            config.circle_radius,
+            color=config.circle_color,
+            alpha=config.opacity,
+        ),
+    ]
 
 
 def rotate_patch(patch, start_x, start_y, end_x, end_y, ax):
@@ -173,7 +228,7 @@ def get_ss_elements(ss_list):
     prev_ss = None
     prev_i = 0
     for i, ss in enumerate(ss_list):
-        ss = SS_DICT.get(ss, 'T')
+        ss = SS_DICT.get(ss, "T")
         if prev_ss is None:
             prev_ss = ss
         if ss != prev_ss:

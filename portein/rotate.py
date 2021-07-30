@@ -28,11 +28,13 @@ def find_best_projection(points):
     i_xy = -np.sum(points[:, 0] * points[:, 1])
     i_yz = -np.sum(points[:, 1] * points[:, 2])
     i_xz = -np.sum(points[:, 0] * points[:, 2])
-    inertia = np.array([
-        (np.sum(points[:, 1] ** 2 + points[:, 2] ** 2), i_xy, i_xz),
-        (i_xy, np.sum(points[:, 0] ** 2 + points[:, 2] ** 2), i_yz),
-        (i_xz, i_yz, np.sum(points[:, 0] ** 2 + points[:, 1] ** 2))
-    ])
+    inertia = np.array(
+        [
+            (np.sum(points[:, 1] ** 2 + points[:, 2] ** 2), i_xy, i_xz),
+            (i_xy, np.sum(points[:, 0] ** 2 + points[:, 2] ** 2), i_yz),
+            (i_xz, i_yz, np.sum(points[:, 0] ** 2 + points[:, 1] ** 2)),
+        ]
+    )
     # Diagonalize and find new Z axis
     values, vectors = np.linalg.eig(inertia)
     new_axis = vectors[np.argmax(values)]
@@ -46,11 +48,25 @@ def find_best_projection(points):
     b_hat = b / np.sqrt(np.sum(b ** 2))
     q0 = np.cos(theta / 2)
     q1, q2, q3 = np.sin(theta / 2) * b_hat
-    quaternion = np.array([
-        (q0 ** 2 + q1 ** 2 - q2 ** 2 - q3 ** 2, 2 * (q1 * q2 - q0 * q3), 2 * (q1 * q3 + q0 * q2)),
-        (2 * (q2 * q1 + q0 * q3), q0 ** 2 - q1 ** 2 + q2 ** 2 - q3 ** 2, 2 * (q2 * q3 - q0 * q1)),
-        (2 * (q3 * q1 - q0 * q2), 2 * (q3 * q2 + q0 * q1), q0 ** 2 - q1 ** 2 - q2 ** 2 + q3 ** 2),
-    ])
+    quaternion = np.array(
+        [
+            (
+                q0 ** 2 + q1 ** 2 - q2 ** 2 - q3 ** 2,
+                2 * (q1 * q2 - q0 * q3),
+                2 * (q1 * q3 + q0 * q2),
+            ),
+            (
+                2 * (q2 * q1 + q0 * q3),
+                q0 ** 2 - q1 ** 2 + q2 ** 2 - q3 ** 2,
+                2 * (q2 * q3 - q0 * q1),
+            ),
+            (
+                2 * (q3 * q1 - q0 * q2),
+                2 * (q3 * q2 + q0 * q1),
+                q0 ** 2 - q1 ** 2 - q2 ** 2 + q3 ** 2,
+            ),
+        ]
+    )
     uvw = np.zeros((3, 3))
     uvw[0] = np.dot(quaternion, i)
     uvw[1] = np.dot(quaternion, j)
@@ -67,11 +83,15 @@ def rotate_to_maximize_bb_height(points):
     maxa = np_apply_along_axis(np.max, 0, ar)
     diff = (maxa - mina) * 0.5
     center = mina + diff
-    corners = np.array([(center[0] - diff[0], center[1] - diff[1]),
-                        (center[0] + diff[0], center[1] - diff[1]),
-                        (center[0] + diff[0], center[1] + diff[1]),
-                        (center[0] - diff[0], center[1] + diff[1]),
-                        (center[0] - diff[0], center[1] - diff[1])])
+    corners = np.array(
+        [
+            (center[0] - diff[0], center[1] - diff[1]),
+            (center[0] + diff[0], center[1] - diff[1]),
+            (center[0] + diff[0], center[1] + diff[1]),
+            (center[0] - diff[0], center[1] + diff[1]),
+            (center[0] - diff[0], center[1] - diff[1]),
+        ]
+    )
     corners = np.dot(corners, vectors.T)
     side_1 = corners[0] - corners[1]
     side_2 = corners[1] - corners[2]

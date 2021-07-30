@@ -22,6 +22,7 @@ class HelixConfig:
     color
     opacity
     """
+
     as_cylinder: bool
     cylinder_ellipse_length: float
     cylinder_ellipse_height: float
@@ -35,7 +36,7 @@ class HelixConfig:
     opacity: float
 
     @classmethod
-    def default(cls, width=1., as_cylinder=False):
+    def default(cls, width=1.0, as_cylinder=False):
         return cls(
             as_cylinder,
             cylinder_ellipse_length=width / 2,
@@ -44,10 +45,10 @@ class HelixConfig:
             wave_arc_width=3.0,
             wave_arc_height=width,
             wave_arc_length=0.5,
-            outline_width=3.,
-            outline_color='#5c6887',
+            outline_width=3.0,
+            outline_color="#5c6887",
             color="lightsteelblue",
-            opacity=1.
+            opacity=1.0,
         )
 
 
@@ -66,6 +67,7 @@ class SheetConfig:
     color
     opacity
     """
+
     thickness_factor: float
     tail_height: float
     head_height: float
@@ -75,15 +77,15 @@ class SheetConfig:
     opacity: float
 
     @classmethod
-    def default(cls, width=1.):
+    def default(cls, width=1.0):
         return cls(
             thickness_factor=1,
             tail_height=width,
             head_height=width * 2,
-            outline_width=3.,
-            outline_color='#5c6887',
+            outline_width=3.0,
+            outline_color="#5c6887",
             color="#999FD0",
-            opacity=1.
+            opacity=1.0,
         )
 
 
@@ -102,6 +104,7 @@ class TurnConfig:
     arc_color
     opacity
     """
+
     thickness_factor: float
     height: float
     circle_radius: float
@@ -111,7 +114,7 @@ class TurnConfig:
     opacity: float
 
     @classmethod
-    def default(cls, width=1.):
+    def default(cls, width=1.0):
         return cls(
             thickness_factor=1 / 2,
             height=width / 2,
@@ -130,14 +133,15 @@ class PorteinConfig:
 
     See docs for `HelixConfig`, `SheetConfig` and `TurnConfig`
     """
+
     helix: HelixConfig
     sheet: SheetConfig
     turn: TurnConfig
 
     @classmethod
-    def default(cls, width=1.):
+    def default(cls, width=1.0):
         return cls(
             helix=HelixConfig.default(width),
             sheet=SheetConfig.default(width),
-            turn=TurnConfig.default(width)
+            turn=TurnConfig.default(width),
         )
