@@ -54,6 +54,7 @@ ax.scatter(points[highlight_residues, 0], points[highlight_residues, 1], color="
 ![highlight points](7lc2_highlight.png)
 - Use the returned fig and ax objects to modify the final figure.
 
+---
 
 <a name="2dprojection">1</a>: https://stackoverflow.com/a/2970340 - Optimal rotation of 3D model for 2D projection
 
