@@ -16,7 +16,7 @@ fig.savefig("7lc2.png")
 ## Installation
 ```shell
 conda install -c salilab dssp
-git clone https://github.com/TurtleTools/portein
+git clone https://github.com/TurtleTools/portein.git
 cd portein
 pip install .
 ```
