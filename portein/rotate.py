@@ -2,6 +2,7 @@ import numpy as np
 import numba as nb
 
 
+# From https://github.com/numba/numba/issues/1269#issuecomment-782189134
 @nb.njit
 def np_apply_along_axis(func1d, axis, arr):
     assert arr.ndim == 2
@@ -95,7 +96,7 @@ def rotate_to_maximize_bb_height(points):
     corners = np.dot(corners, vectors.T)
     side_1 = corners[0] - corners[1]
     side_2 = corners[1] - corners[2]
-    if np.sum(side_1 ** 2) > np.sum(side_2) ** 2:
+    if np.sum(side_1 ** 2) > np.sum(side_2 ** 2):
         theta = np.arctan2(side_1[0], side_1[1])
     else:
         theta = np.arctan2(side_2[0], side_2[1])
