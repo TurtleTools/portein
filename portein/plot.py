@@ -23,7 +23,7 @@ SS_DICT = {
 
 
 def plot_portrait(
-    pdb: ty.Union[str, Path, pd.AtomGroup], config: PorteinConfig, height=12
+    pdb: ty.Union[str, Path, pd.AtomGroup], config: PorteinConfig, height=12, width=None
 ):
     """
     Plot 2D portrait of a protein
@@ -35,8 +35,9 @@ def plot_portrait(
     config
         PorteinConfig object
     height
-        figure height (width is auto-calculated)
-
+        figure height (auto-calculated from width if set to None)
+    width
+        figure width (auto-calculated from height if set to None)
     Returns
     -------
     matplotlib Figure, matplotlib Axes, 2D points corresponding to each residue
@@ -54,7 +55,7 @@ def plot_portrait(
     coords = rotate_to_maximize_bb_height(coords[:, :2])
     ss_list = structure_alpha.getSecstrs()
     ss_elements = get_ss_elements(ss_list)
-    fig, ax = plt.subplots(1, figsize=find_size(coords, height))
+    fig, ax = plt.subplots(1, figsize=find_size(coords, height, width))
     plt.axis("off")
     min_x, min_y, max_x, max_y = np.inf, np.inf, -np.inf, -np.inf
     for (ss, start_i, end_i) in ss_elements:
@@ -251,8 +252,15 @@ def update_limits(sx, sy, ex, ey, min_x, min_y, max_x, max_y):
     return min_x, min_y, max_x, max_y
 
 
-@nb.njit
-def find_size(points, height=5):
+def find_size(points, height: ty.Optional[float], width: ty.Optional[float]):
+    assert (
+        width is not None or height is not None
+    ), "Either one of height or width must be set"
+    if height is not None and width is not None:
+        return width, height
     min_x, max_x = np.min(points[:, 0]), np.max(points[:, 0])
     min_y, max_y = np.min(points[:, 1]), np.max(points[:, 1])
-    return (max_x - min_x) * height / (max_y - min_y), height
+    if height is None:
+        return width, (max_y - min_y) * width / (max_x - min_x)
+    else:
+        return (max_x - min_x) * height / (max_y - min_y), height
