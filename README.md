@@ -9,10 +9,15 @@ Portein plots secondary structural elements according to the best 2D projection 
 e.g.
 
 ```python
-from portein import plot_portrait, PorteinConfig
-config = PorteinConfig.default()
-plot_portrait("7lc2", config)
+from portein import plot_portrait
+plot_portrait("7lc2")
 ```
+
+or run from the command line
+```shell
+portein 7lc2 7lc2.png
+```
+
 ![example](images/7lc2.png)
 
 ## Installation
@@ -44,7 +49,7 @@ config = PorteinConfig.default()
 config.helix.as_cylinder = True # Plot helices as cylinders
 config.sheet.color = "red"
 config.sheet.opacity = 0.5
-plot_portrait("7lc2", config)
+plot_portrait("7lc2", config, height=12)
 ```
 ![custom config](images/7lc2_custom_config.png)
 
@@ -89,9 +94,8 @@ PorteinConfig(
 ### Plotting
 - Use the returned points array to highlight specific residues.
 ```python
-from portein import plot_portrait, PorteinConfig
-config = PorteinConfig.default()
-ax, points = plot_portrait("7lc2", config)
+from portein import plot_portrait
+ax, points = plot_portrait("7lc2")
 highlight_residues = [1, 5, 19, 40, 250]
 ax.scatter(points[highlight_residues, 0], 
            points[highlight_residues, 1],
@@ -103,9 +107,8 @@ ax.scatter(points[highlight_residues, 0],
 
 - Use the returned ax object to modify the figure
 ```python
-from portein import plot_portrait, PorteinConfig
-config = PorteinConfig.default()
-ax, points = plot_portrait("7lc2", config, 12)
+from portein import plot_portrait
+ax, points = plot_portrait("7lc2")
 ax.set_title("Portrait of PDB ID: 7lc2", fontsize=20)
 ```
 ![modify ax](images/modify_ax.png)
