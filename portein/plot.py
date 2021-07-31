@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import prody as pd
-import numba as nb
 from matplotlib import patches as m_patches
 from matplotlib import transforms as m_transforms
 import typing as ty
@@ -23,7 +22,7 @@ SS_DICT = {
 
 
 def plot_portrait(
-    pdb: ty.Union[str, Path, pd.AtomGroup], config: PorteinConfig, height=12, width=None
+    pdb: ty.Union[str, Path, pd.AtomGroup], config: PorteinConfig, height=12, width=None, ax=None
 ):
     """
     Plot 2D portrait of a protein
@@ -38,6 +37,8 @@ def plot_portrait(
         figure height (auto-calculated from width if set to None)
     width
         figure width (auto-calculated from height if set to None)
+    ax
+        matplotlib ax to use, if None, makes new figure with specified height and width
     Returns
     -------
     matplotlib Figure, matplotlib Axes, 2D points corresponding to each residue
@@ -55,8 +56,9 @@ def plot_portrait(
     coords = rotate_to_maximize_bb_height(coords[:, :2])
     ss_list = structure_alpha.getSecstrs()
     ss_elements = get_ss_elements(ss_list)
-    fig, ax = plt.subplots(1, figsize=find_size(coords, height, width))
-    plt.axis("off")
+    if ax is None:
+        fig, ax = plt.subplots(1, figsize=find_size(coords, height, width))
+    ax.axis("off")
     min_x, min_y, max_x, max_y = np.inf, np.inf, -np.inf, -np.inf
     for (ss, start_i, end_i) in ss_elements:
         if ss == "H":
@@ -75,7 +77,7 @@ def plot_portrait(
     ax.set_ylim(min_y - 1, max_y + 1)
     for direction in ["left", "right", "top", "bottom"]:
         ax.spines[direction].set_visible(False)
-    return fig, ax, coords
+    return ax, coords
 
 
 def make_helix_wave(config: HelixConfig, length):
