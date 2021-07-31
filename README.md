@@ -23,9 +23,7 @@ portein 7lc2 7lc2.png
 ## Installation
 ```shell
 conda install -c salilab dssp
-git clone https://github.com/TurtleTools/portein.git
-cd portein
-pip install .
+pip install git+https://github.com/TurtleTools/portein.git
 ```
 
 ## How it works
