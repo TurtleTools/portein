@@ -8,8 +8,7 @@ e.g.
 ```python
 from portein import plot_portrait, PorteinConfig
 config = PorteinConfig.default()
-fig, ax, points = plot_portrait("7lc2", config)
-fig.savefig("7lc2.png")
+plot_portrait("7lc2", config)
 ```
 ![example](7lc2.png)
 
@@ -40,21 +39,33 @@ config = PorteinConfig.default()
 config.helix.as_cylinder = True # Plot helices as cylinders
 config.sheet.color = "red"
 config.sheet.opacity = 0.5
-fig, ax, points = plot_portrait("7lc2", config)
+plot_portrait("7lc2", config)
 ```
 ![custom config](7lc2_custom_config.png)
 - Use the returned points array to highlight specific residues.
 ```python
 from portein import plot_portrait, PorteinConfig
 config = PorteinConfig.default()
-fig, ax, points = plot_portrait("7lc2", config)
+ax, points = plot_portrait("7lc2", config)
 highlight_residues = [1, 5, 19, 40, 250]
-ax.scatter(points[highlight_residues, 0], points[highlight_residues, 1],
+ax.scatter(points[highlight_residues, 0], 
+           points[highlight_residues, 1],
            color="red", s=100, 
            edgecolor="black", linewidth=2)
 ```
 ![highlight points](7lc2_highlight.png)
-- Use the returned fig and ax objects to modify the final figure.
+
+
+- Use the ax parameter for subplots.
+```python
+from portein import plot_portrait, PorteinConfig
+import matplotlib.pyplot as plt
+fig, axes = plt.subplots(1, 3, figsize=(18, 8))
+config = PorteinConfig.default(outline_width=2)
+for i, pdb_id in enumerate(["7lc2", "5eat", "7cmb"]):
+    plot_portrait(pdb_id, config, ax=axes[i])
+```
+![multiple](multiple.png)
 
 ---
 
