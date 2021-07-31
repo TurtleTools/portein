@@ -1,7 +1,10 @@
 # Portein
 ## Portraits of Proteins
 
-Plot 2D representations of 3D protein structures.
+2D representations of 3D protein structures.
+
+Portein plots secondary structural elements according to the best 2D projection of the input 3D structure. 
+(best = greatest area visible)
 
 e.g.
 
