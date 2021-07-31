@@ -42,6 +42,7 @@ config.sheet.opacity = 0.5
 plot_portrait("7lc2", config)
 ```
 ![custom config](7lc2_custom_config.png)
+
 - Use the returned points array to highlight specific residues.
 ```python
 from portein import plot_portrait, PorteinConfig
@@ -56,14 +57,25 @@ ax.scatter(points[highlight_residues, 0],
 ![highlight points](7lc2_highlight.png)
 
 
+- Use the returned ax object to modify the figure
+```python
+from portein import plot_portrait, PorteinConfig
+config = PorteinConfig.default()
+ax, points = plot_portrait("7lc2", config, 12)
+ax.set_title("Portrait of PDB ID: 7lc2", fontsize=20)
+```
+![modify ax](modify_ax.png)
+
+
 - Use the ax parameter for subplots.
 ```python
 from portein import plot_portrait, PorteinConfig
 import matplotlib.pyplot as plt
 fig, axes = plt.subplots(1, 3, figsize=(18, 8))
 config = PorteinConfig.default(outline_width=2)
-for i, pdb_id in enumerate(["7lc2", "5eat", "7cmb"]):
-    plot_portrait(pdb_id, config, ax=axes[i])
+for ax, pdb_id in zip(axes.ravel(), ["7lc2", "5eat", "7cmb"]):
+    plot_portrait(pdb_id, config, ax=ax)
+    ax.set_title(pdb_id)
 ```
 ![multiple](multiple.png)
 
