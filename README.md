@@ -32,7 +32,9 @@ pip install .
     
 
 ## Customization
-- Use the `PorteinConfig` object to modify plotting colors, line widths etc.
+### Configuration
+
+Use the `PorteinConfig` object to modify plotting colors, line widths etc.
 ```python
 from portein import plot_portrait, PorteinConfig
 config = PorteinConfig.default()
@@ -43,6 +45,45 @@ plot_portrait("7lc2", config)
 ```
 ![custom config](images/7lc2_custom_config.png)
 
+Available options and defaults:
+
+```python
+PorteinConfig(
+    helix=HelixConfig(
+        as_cylinder=False,
+        cylinder_ellipse_length=0.5,
+        cylinder_ellipse_height=0.999,
+        cylinder_rectangle_height=1.0,
+        wave_arc_width=3.0,
+        wave_arc_height=1.0,
+        wave_arc_length=0.5,
+        outline_width=2,
+        outline_color='#5c6887',
+        color='lightsteelblue',
+        opacity=1.0
+    ),
+    sheet=SheetConfig(
+        thickness_factor=1,
+        tail_height=1.0,
+        head_height=2.0,
+        outline_width=2,
+        outline_color='#5c6887',
+        color='#999FD0',
+        opacity=1.0
+    ),
+    turn=TurnConfig(
+        thickness_factor=0.5,
+        height=0.5,
+        circle_radius=0.2,
+        circle_color='#d1d6e3',
+        arc_width=2,
+        arc_color='#d1d6e3',
+        opacity=0.8
+    )
+)
+```
+
+### Plotting
 - Use the returned points array to highlight specific residues.
 ```python
 from portein import plot_portrait, PorteinConfig
