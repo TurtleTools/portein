@@ -47,7 +47,7 @@ def plot_portrait(
         structure = pd.parsePDB(pdb)
     else:
         structure = pdb
-    dssp_file = pd.execDSSP(structure.getTitle()[:4])
+    dssp_file = pd.execDSSP(pdb)
     structure = pd.parseDSSP(dssp_file, structure)
     structure_alpha = structure.select("calpha")
     coords = structure_alpha.getCoords()
