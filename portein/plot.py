@@ -22,7 +22,11 @@ SS_DICT = {
 
 
 def plot_portrait(
-        pdb: ty.Union[str, Path, pd.AtomGroup], config: PorteinConfig = None, height=12, width=None, ax=None
+    pdb: ty.Union[str, Path, pd.AtomGroup],
+    config: PorteinConfig = None,
+    height=12,
+    width=None,
+    ax=None,
 ):
     """
     Plot 2D portrait of a protein
@@ -258,7 +262,7 @@ def update_limits(sx, sy, ex, ey, min_x, min_y, max_x, max_y):
 
 def find_size(points, height: ty.Optional[float], width: ty.Optional[float]):
     assert (
-            width is not None or height is not None
+        width is not None or height is not None
     ), "Either one of height or width must be set"
     if height is not None and width is not None:
         return width, height
