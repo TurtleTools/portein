@@ -1,5 +1,41 @@
 import numpy as np
 import numba as nb
+import typing as ty
+import prody as pd
+from pathlib import Path
+
+
+def get_best_transformation(coords: ty.Union[pd.AtomGroup, np.ndarray, str, Path]):
+    """
+    Get transformation matrix for best 2D projection (in the X-Y plane)
+
+    Parameters
+    ----------
+    coords
+        either an array of 3D coordinates, a PDB file path, or a prody AtomGroup
+
+    Returns
+    -------
+    4x4 transformation matrix
+    """
+    if type(coords) == str or type(coords) == Path:
+        coords = pd.parsePDB(coords).select("protein and calpha").getCoords()
+    elif type(coords) == pd.AtomGroup:
+        coords = coords.getCoords()
+    matrix = np.eye(4)
+    for i in range(20):
+        m = find_best_projection(coords)
+        if np.allclose(m, np.eye(4)):
+            break
+        coords = apply_transformation(coords, m)
+        matrix = m @ matrix
+    matrix = rotate_to_maximize_bb_height(coords[:, :2]) @ matrix
+    return matrix
+
+
+@nb.njit
+def apply_transformation(points, matrix):
+    return np.dot(np.hstack((points, np.ones((points.shape[0], 1)))), matrix.T)[:, :3]
 
 
 # From https://github.com/numba/numba/issues/1269#issuecomment-782189134
@@ -24,7 +60,10 @@ def np_apply_along_axis(func1d, axis, arr):
 @nb.njit
 def find_best_projection(points):
     # Recenter
-    points -= np_apply_along_axis(np.mean, 0, points)
+    translation_vector = -np_apply_along_axis(np.mean, 0, points)
+    matrix = np.eye(4)
+    matrix[:3, -1] = translation_vector
+    points += translation_vector
     # Calculate moment of inertia tensor
     i_xy = -np.sum(points[:, 0] * points[:, 1])
     i_yz = -np.sum(points[:, 1] * points[:, 2])
@@ -43,7 +82,7 @@ def find_best_projection(points):
     # Rotate coordinate system to new Z axis
     i, j, k = np.eye(3)
     if np.sum((new_axis - k) ** 2) < 1e-8:
-        return points
+        return matrix
     theta = np.arccos(np.dot(new_axis, k))
     b = np.cross(k, new_axis)
     b_hat = b / np.sqrt(np.sum(b ** 2))
@@ -68,11 +107,10 @@ def find_best_projection(points):
             ),
         ]
     )
-    uvw = np.zeros((3, 3))
-    uvw[0] = np.dot(quaternion, i)
-    uvw[1] = np.dot(quaternion, j)
-    uvw[2] = np.dot(quaternion, k)
-    return np.dot(points, uvw)
+    matrix[:3, 0] = np.dot(quaternion, i)
+    matrix[:3, 1] = np.dot(quaternion, j)
+    matrix[:3, 2] = np.dot(quaternion, k)
+    return matrix
 
 
 # Adapted from: https://stackoverflow.com/questions/32892932/create-the-oriented-bounding-box-obb-with-python-and-numpy
@@ -102,5 +140,7 @@ def rotate_to_maximize_bb_height(points):
         theta = np.arctan2(side_2[0], side_2[1])
 
     c, s = np.cos(theta), np.sin(theta)
-    rotation = np.array(((c, -s), (s, c)))
-    return np.dot(points, rotation.T)
+    matrix = np.eye(4)
+    matrix[0, :2] = (c, -s)
+    matrix[1, :2] = (s, c)
+    return matrix

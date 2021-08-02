@@ -7,7 +7,7 @@ import typing as ty
 from pathlib import Path
 
 from portein.config import HelixConfig, TurnConfig, SheetConfig, PorteinConfig
-from portein.rotate import find_best_projection, rotate_to_maximize_bb_height
+from portein.rotate import get_best_transformation, apply_transformation
 
 SS_DICT = {
     "H": "H",
@@ -22,11 +22,11 @@ SS_DICT = {
 
 
 def plot_portrait(
-    pdb: ty.Union[str, Path, pd.AtomGroup],
-    config: PorteinConfig = None,
-    height=12,
-    width=None,
-    ax=None,
+        pdb: ty.Union[str, Path, pd.AtomGroup],
+        config: PorteinConfig = None,
+        height=12,
+        width=None,
+        ax=None,
 ):
     """
     Plot 2D portrait of a protein
@@ -57,9 +57,8 @@ def plot_portrait(
     structure = pd.parseDSSP(dssp_file, structure)
     structure_alpha = structure.select("calpha")
     coords = structure_alpha.getCoords()
-    for i in range(20):
-        coords = find_best_projection(coords)
-    coords = rotate_to_maximize_bb_height(coords[:, :2])
+    matrix = get_best_transformation(coords)
+    coords = apply_transformation(coords, matrix)[:, :2]
     ss_list = structure_alpha.getSecstrs()
     ss_elements = get_ss_elements(ss_list)
     if ax is None:
@@ -261,8 +260,22 @@ def update_limits(sx, sy, ex, ey, min_x, min_y, max_x, max_y):
 
 
 def find_size(points, height: ty.Optional[float], width: ty.Optional[float]):
+    """
+    Find figure size given coordinates and size of one dimension.
+    Calculates height from width if height=None and width from height if width=None
+
+    Parameters
+    ----------
+    points
+    height
+    width
+
+    Returns
+    -------
+    (height, width)
+    """
     assert (
-        width is not None or height is not None
+            width is not None or height is not None
     ), "Either one of height or width must be set"
     if height is not None and width is not None:
         return width, height
