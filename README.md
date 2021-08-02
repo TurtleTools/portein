@@ -124,6 +124,32 @@ for ax, pdb_id in zip(axes.ravel(), ["7lc2", "5eat", "7cmb"]):
 ```
 ![multiple](images/multiple.png)
 
+### Transformation
+
+If you don't want the SSE representation and just want to find the most flattering angle for your protein, 
+use the transformation matrix directly.
+
+```python
+import prody as pd
+from portein import get_best_transformation, apply_transformation, find_size
+import matplotlib.pyplot as plt
+
+pdb = pd.parsePDB("7lc2")
+coords = pdb.select("protein and calpha").getCoords()
+matrix = get_best_transformation(coords)
+
+# Rotate the whole protein
+pdb = pd.applyTransformation(pd.Transformation(matrix), pdb)
+
+# Or rotate the coords for plotting
+coords = apply_transformation(coords, matrix)
+plt.figure(figsize=find_size(coords, height=12, width=None))
+plt.plot(coords[:, 0], coords[:, 1])
+plt.axis("off")
+```
+
+![7lc2_raw](images/7lc2_raw.png)
+
 ---
 
 <a name="2dprojection">1</a>: https://stackoverflow.com/a/2970340 - Optimal rotation of 3D model for 2D projection
