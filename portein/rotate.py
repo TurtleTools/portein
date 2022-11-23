@@ -1,8 +1,9 @@
-import numpy as np
-import numba as nb
 import typing as ty
-import prody as pd
 from pathlib import Path
+
+import numba as nb
+import numpy as np
+import prody as pd
 
 
 def get_best_transformation(coords: ty.Union[pd.AtomGroup, np.ndarray, str, Path]):
@@ -144,3 +145,11 @@ def rotate_to_maximize_bb_height(points):
     matrix[0, :2] = (c, -s)
     matrix[1, :2] = (s, c)
     return matrix
+
+
+@nb.njit
+def compile_numba_functions():
+    # Compile numba functions
+    find_best_projection(np.array([[0, 0, 0]]))
+    matrix = rotate_to_maximize_bb_height(np.array([[0, 0, 0]]))
+    apply_transformation(np.array([[0, 0, 0]]), matrix)
