@@ -150,6 +150,6 @@ def rotate_to_maximize_bb_height(points):
 @nb.njit
 def compile_numba_functions():
     # Compile numba functions
-    find_best_projection(np.array([[0, 0, 0]]))
-    matrix = rotate_to_maximize_bb_height(np.array([[0, 0, 0]]))
-    apply_transformation(np.array([[0, 0, 0]]), matrix)
+    find_best_projection(np.array([[0., 0., 0.]]))
+    matrix = rotate_to_maximize_bb_height(np.array([[0., 0., 0.]]))
+    apply_transformation(np.array([[0., 0., 0.]]), matrix)
