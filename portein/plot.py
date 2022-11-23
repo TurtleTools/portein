@@ -272,7 +272,7 @@ def find_size(points, height: ty.Optional[float], width: ty.Optional[float]):
 
     Returns
     -------
-    (height, width)
+    (width, height)
     """
     assert (
             width is not None or height is not None
