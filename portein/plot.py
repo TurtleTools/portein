@@ -3,8 +3,16 @@ import numpy as np
 import prody as pd
 from matplotlib import patches as m_patches
 from matplotlib import transforms as m_transforms
+from matplotlib import colors as m_colors
+from matplotlib import colormaps
 import typing as ty
 from pathlib import Path
+from dataclasses import dataclass, field
+from itertools import groupby
+from operator import itemgetter
+import subprocess
+from PIL import Image
+from pymol import cmd, util
 
 from portein.config import HelixConfig, TurnConfig, SheetConfig, PorteinConfig
 from portein.rotate import get_best_transformation, apply_transformation
@@ -285,3 +293,288 @@ def find_size(points, height: ty.Optional[float], width: ty.Optional[float]):
         return width, (max_y - min_y) * width / (max_x - min_x)
     else:
         return (max_x - min_x) * height / (max_y - min_y), height
+
+def put_alpha(img, transparency):
+    im2 = img.copy()
+    im2.putalpha(int(255 * (1 - transparency)))
+    img.paste(im2, img)
+    return img
+
+
+def alpha_blending(color, alpha):
+    return tuple( (1. -  alpha) + np.array(color)*alpha )
+
+def get_chain_colors(chain_colormap, pdb_file):
+    if isinstance(chain_colormap, str):
+        chain_to_color = {}
+        chains = sorted(set(pd.parsePDB(str(pdb_file)).getChids()))
+        colormap = colormaps.get(chain_colormap, None)
+        for i, chain in enumerate(chains):
+            if colormap is None:
+                chain_to_color[chain] = m_colors.to_rgb(chain_colormap)
+            else:
+                chain_to_color[chain] = colormap(i)
+    else:
+        chain_to_color = {c: m_colors.to_rgb(chain_colormap[c]) for c in chain_colormap}
+    return chain_to_color
+    
+def get_residues_colors(highlight_residues):
+    chain_to_residue_range_color = {}
+    for chain in highlight_residues:
+        chain_to_residue_range_color[chain] = {}
+        for color, residues in highlight_residues[chain].items():
+            residues = sorted(residues)
+            residue_ranges = []
+            for _, g in groupby(enumerate(residues), lambda ix: ix[0] - ix[1]):
+                group = list(map(itemgetter(1), g))
+                residue_ranges.append((group[0], group[-1]))
+            chain_to_residue_range_color[chain][color] = residue_ranges
+    return chain_to_residue_range_color
+
+@dataclass
+class Illustrate:
+    pdb_file: str
+    """PDB file to read"""
+    illustrate_binary: str = "illustrate"
+    """path to illustrate binary"""
+    output_prefix: str = None
+    """prefix for output files. If None uses the PDB file name"""
+    chain_colormap: ty.Union[str, dict] = "Set3"
+    """colormap to use for coloring chains, either a matplotlib colormap or a dictionary of {chain: color}"""
+    highlight_residues: dict = field(default_factory=dict)
+    """dictionary of {chain: {color: [residues]}}"""
+    center: str = 'auto'
+    """center of the image, one of 'auto' or 'center'"""
+    translation: ty.Tuple[float, float, float] = (0., 0., 0.)
+    """translation x, y, z in Angstroms"""
+    scale: float = 10.0
+    """scale (pixels/Angstrom), controls size of image"""
+    rotation: ty.Tuple[float, float, float] = (0., 0., 0.)
+    """rotation x, y, z in degrees"""
+    background_color = "white"
+    """background color"""
+    fog_color = "white"
+    """fog color"""
+    fog_front_transparency = 1.0
+    """fractional transparency of fog at front of molecule (0.0-1.0, 1.0=no fog)"""
+    fog_back_transparency = 1.0
+    """fractional transparency of fog at back of molecule (0.0-1.0, 1.0=no fog)"""
+    sidechain_transparency = 0.8
+    """fractional transparency of sidechain atoms (0.0-1.0, 1.0=same color as backbone)"""
+    shadow: bool = True
+    """whether to include shadows"""
+    shadow_cone_fraction: float = 0.0023
+    """fractional shadowing around each atom. larger=darker (0.0-1.0, typically 0.0023)"""
+    shadow_cone_angle: float = 2.0
+    """angle of shadowing around each atom. larger=tighter region (typically 2.0)"""
+    shadow_cone_difference: float = 1.0
+    """shadowing only applied if z-difference greater than this value (Angstroms, typically 1.0)"""
+    shadow_cone_max: float = 0.7
+    """maximal shadowing amount. smaller=darker (0.0-1.0, typically 0.7)"""
+    padding: tuple = (-2, -2)
+    """padding around molecule (width, height)"""
+    contour_outline_min: float = 3.0
+    contour_outline_max: float = 10.0
+    """thresholds for gray to black. typically values from about 3.0-20.0, 
+    best values for typical atomic illustrations: 3.0, 10.0"""
+    contour_ikernel: int = 4
+    """kernel for derivative calculation (1,2,3,4 smoothest=4)"""
+    contour_difference_min: float = 0.0
+    contour_difference_max: float = 5.0
+    """range of z-difference used for derivative (Angstroms)
+        0.0,1.0 gives outlines around every atom
+        0.0,1000.0 gives only outline around molecule
+        0.0,5.0 is typical
+    """
+    subunit_outline_min: float = 3.0
+    subunit_outline_max: float = 10.0
+    """thresholds for gray to black (typically ~ 3.0-20.0)"""
+    residue_outline_min: float = 3.0
+    residue_outline_max: float = 10.0
+    """thresholds for gray to black (typically ~ 3.0-20.0)"""
+    residue_difference: float = 1.0
+    """difference in residue numbers to draw outlines"""
+    width: int = None
+    height: int = None
+
+    @property
+    def _output_prefix(self):
+        return self.output_prefix if self.output_prefix is not None else Path(self.pdb_file).stem
+
+    def make_command_file(self):
+        chain_to_color = get_chain_colors(self.chain_colormap, self.pdb_file)
+        chain_to_residue_range_color = get_residues_colors(self.highlight_residues)
+        with open(f"{self._output_prefix}.inp", "w") as f:
+            # omit hydrogens and water
+            f.write(f"""read
+{self.pdb_file}
+HETATM-----HOH-- 0,9999, 0.5,0.5,0.5, 0.0
+ATOM  -H-------- 0,9999, 0.5,0.5,0.5, 0.0
+ATOM  H--------- 0,9999, 0.5,0.5,0.5, 0.0
+""")
+            for chain in chain_to_color:
+                calpha_color = chain_to_color[chain]
+                sidechain_color = alpha_blending(calpha_color, self.sidechain_transparency)
+                if chain in self.highlight_residues:
+                    for color, residue_ranges in chain_to_residue_range_color[chain].items():
+                        color = m_colors.to_rgb(color)
+                        for start, end in residue_ranges:
+                            f.write(f"ATOM  -C-------{chain} {start},{end}, {color[0]:.1f},{color[1]:.1f},{color[2]:.1f}, 1.6\n")
+                            f.write(f"ATOM  -S-------{chain} {start},{end}, {color[0]:.1f},{color[1]:.1f},{color[2]:.1f}, 1.6\n")
+                            f.write(f"ATOM  ---------{chain} {start},{end}, {color[0]:.1f},{color[1]:.1f},{color[2]:.1f}, 1.5\n")
+                f.write(f"ATOM  -C-------{chain} 0,9999, {calpha_color[0]:.1f},{calpha_color[1]:.1f},{calpha_color[2]:.1f}, 1.6\n")
+                f.write(f"ATOM  -S-------{chain} 0,9999, {calpha_color[0]:.1f},{calpha_color[1]:.1f},{calpha_color[2]:.1f}, 1.5\n")
+                f.write(f"ATOM  ---------{chain} 0,9999, {sidechain_color[0]:.1f},{sidechain_color[1]:.1f},{sidechain_color[2]:.1f}, 1.5\n")
+            f.write(f"""END
+center
+{self.center}
+trans
+{','.join(map(lambda x: f"{x}", self.translation))}
+scale
+{self.scale}
+xrot
+{self.rotation[0]}
+yrot
+{self.rotation[1]}
+zrot
+{self.rotation[2]}
+wor
+{','.join(f"{x}" for x in m_colors.to_rgb(self.background_color))},{','.join(f"{x}" for x in m_colors.to_rgb(self.fog_color))},{self.fog_front_transparency},{self.fog_back_transparency}
+{int(self.shadow)},{self.shadow_cone_fraction},{self.shadow_cone_angle},{self.shadow_cone_difference},{self.shadow_cone_max}
+{self.padding[0]},{self.padding[1]}
+illustrate
+{self.contour_outline_min},{self.contour_outline_max},{self.contour_ikernel},{self.contour_difference_min},{self.contour_difference_max}
+{self.subunit_outline_min},{self.subunit_outline_max}
+{self.residue_outline_min},{self.residue_outline_max},{self.residue_difference}
+calculate
+{self._output_prefix}.pnm""")
+            
+    def run(self, remove_intermediate_files: bool = True):
+        self.make_command_file()
+        with open(f"{self._output_prefix}.inp", 'r') as file:
+            subprocess.run([self.illustrate_binary], stdin=file, check=True, stdout=subprocess.DEVNULL)
+        img = Image.open(f"{self._output_prefix}.pnm")
+        img = img.rotate(90, expand=True)
+        self.width = self.width if self.width is not None else img.width
+        self.height = self.height if self.height is not None else img.height
+        img.save(f"{self._output_prefix}.png")
+        if remove_intermediate_files:
+            Path(f"{self._output_prefix}.inp").unlink()
+            Path(f"{self._output_prefix}.pnm").unlink()
+
+@dataclass
+class PymolConfig:
+    ray_trace_mode: int = 1
+    surface_quality: int = 2
+    cartoon_sampling: int = 20
+    ambient: float = 0.5
+    cartoon_discrete_colors: bool = True
+    ray_opaque_background: bool = False
+    cartoon_fancy_helices: bool = True
+    antialias: int = 2
+    ray_trace_gain: float = 1
+    ray_trace_disco_factor: int = 1
+    ray_texture: int = 0
+    ray_trace_fog: bool = False
+    hash_max: int = 300
+    depth_cue: bool = False
+    ray_shadows: bool = False
+    light_count: int = 2
+    specular: bool = False
+
+@dataclass
+class RepresentationConfig:
+    representation: str
+    pymol_config: PymolConfig
+    selection: str
+    transparency: float
+
+@dataclass
+class Pymol:
+    pdb_file: str
+    """PDB file to read"""
+    pymol_binary: str = "pymol"
+    """path to pymol binary"""
+    output_prefix: str = None
+    """prefix for output files. If None uses the PDB file name"""
+    chain_colormap: ty.Union[str, dict] = "Set3"
+    """colormap to use for coloring chains, either a matplotlib colormap or a dictionary of {chain: color}"""
+    highlight_residues: dict = field(default_factory=dict)
+    """dictionary of {chain: {color: [residues]}}"""
+    figure_order: ty.List[RepresentationConfig] = None
+    """order of representations, selections, and transparencies to layer on top of each other"""
+    orient: bool = False
+    """re-orient the protein using pymol"""
+    width: int = None
+    """width of image"""
+    height: int = None
+    """height of image"""
+    buffer: float = None
+    
+    def __post_init__(self):
+        if self.figure_order is None:
+            self.figure_order = [RepresentationConfig(representation="surface",
+                                                pymol_config=PymolConfig(light_count=1), 
+                                                selection="all",
+                                                transparency=0.5), 
+                                RepresentationConfig(representation="cartoon",
+                                                    pymol_config=PymolConfig(), 
+                                                    selection="all",
+                                                    transparency=0.),
+                                RepresentationConfig(representation="stick",
+                                                    pymol_config=PymolConfig(), 
+                                                    selection="highlight",
+                                                    transparency=0.)]
+        pdb = pd.parsePDB(self.pdb_file)
+        if self.width is None or self.height is None:
+            self.width, self.height = find_size(pdb.getCoords(), self.width, self.height)
+
+    @property
+    def _output_prefix(self):
+        return self.output_prefix if self.output_prefix is not None else Path(self.pdb_file).stem
+    
+    def draw_protein(self):
+        cmd.load(self.pdb_file)
+        cmd.bg_color("white")
+        cmd.remove("solvent")
+        if self.orient:
+            cmd.orient()
+        if self.buffer is not None:
+            cmd.zoom(buffer=self.buffer)
+        chain_to_color = get_chain_colors(self.chain_colormap, self.pdb_file)
+        for chain, color in chain_to_color.items():
+            cmd.color(f"0x{m_colors.to_hex(color).lower()[1:]}", f"chain {chain}")
+    
+        for representation_config in self.figure_order:
+            config = representation_config.pymol_config.__dict__
+            for key, value in config.items():
+                if key in ["specular", "depth_cue"]:
+                    cmd.unset(key)
+                else:
+                    cmd.set(key, value)
+            cmd.hide("everything")
+            if representation_config.selection == "highlight":
+                for chain, colors in self.highlight_residues.items():
+                    for color, residues in colors.items():
+                        if color is None:
+                            color = chain_to_color[chain]
+                        color = m_colors.to_hex(color).lower()[1:]
+                        cmd.select(f"highlight_{chain}_{color}", f"chain {chain} and resi {'+'.join(str(x) for x in residues)}")
+                        cmd.show(representation_config.representation, f"highlight_{chain}_{color}")
+                        cmd.color(f"0x{color}", f"highlight_{chain}_{color}")
+                        util.cnc(f"highlight_{chain}_{color}")
+            else:
+                cmd.show(representation_config.representation, representation_config.selection)
+            cmd.ray(self.width, self.height)
+            cmd.png(f"{self._output_prefix}_{representation_config.representation}.png", width=self.width, height=self.height, dpi=300)
+        self.layer()
+
+    def layer(self):
+        pngs = []
+        for representation_config in self.figure_order:
+            img = Image.open(f"{self._output_prefix}_{representation_config.representation}.png")
+            pngs.append(put_alpha(img, representation_config.transparency))
+        image = Image.new("RGBA", pngs[0].size)
+        for png in pngs:
+            image = Image.alpha_composite(image, png)
+        image.save(f"{self._output_prefix}.png")
