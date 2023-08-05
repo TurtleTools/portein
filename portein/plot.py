@@ -337,6 +337,8 @@ class Illustrate:
     """PDB file to read"""
     illustrate_binary: str = "illustrate"
     """path to illustrate binary"""
+    convert_binary: str = "convert"
+    """path to convert binary"""
     output_prefix: str = None
     """prefix for output files. If None uses the PDB file name"""
     chain_colormap: ty.Union[str, dict] = "Set3"
@@ -355,11 +357,11 @@ class Illustrate:
     """background color"""
     fog_color = "white"
     """fog color"""
-    fog_front_transparency = 1.0
+    fog_front_transparency: float = 1.0
     """fractional transparency of fog at front of molecule (0.0-1.0, 1.0=no fog)"""
-    fog_back_transparency = 1.0
+    fog_back_transparency: float = 1.0
     """fractional transparency of fog at back of molecule (0.0-1.0, 1.0=no fog)"""
-    sidechain_transparency = 0.8
+    sidechain_transparency: float = 0.8
     """fractional transparency of sidechain atoms (0.0-1.0, 1.0=same color as backbone)"""
     shadow: bool = True
     """whether to include shadows"""
@@ -394,6 +396,10 @@ class Illustrate:
     """thresholds for gray to black (typically ~ 3.0-20.0)"""
     residue_difference: float = 1.0
     """difference in residue numbers to draw outlines"""
+    carbon_radius: float = 1.6
+    """radius of carbon atoms (Angstroms)"""
+    sidechain_radius: float = 1.5
+    """radius of sidechain atoms (Angstroms)"""
     width: int = None
     height: int = None
 
@@ -411,7 +417,8 @@ class Illustrate:
 HETATM-----HOH-- 0,9999, 0.5,0.5,0.5, 0.0
 ATOM  -H-------- 0,9999, 0.5,0.5,0.5, 0.0
 ATOM  H--------- 0,9999, 0.5,0.5,0.5, 0.0
-""")
+""")        
+            
             for chain in chain_to_color:
                 calpha_color = chain_to_color[chain]
                 sidechain_color = alpha_blending(calpha_color, self.sidechain_transparency)
@@ -419,12 +426,17 @@ ATOM  H--------- 0,9999, 0.5,0.5,0.5, 0.0
                     for color, residue_ranges in chain_to_residue_range_color[chain].items():
                         color = m_colors.to_rgb(color)
                         for start, end in residue_ranges:
-                            f.write(f"ATOM  -C-------{chain} {start},{end}, {color[0]:.1f},{color[1]:.1f},{color[2]:.1f}, 1.6\n")
-                            f.write(f"ATOM  -S-------{chain} {start},{end}, {color[0]:.1f},{color[1]:.1f},{color[2]:.1f}, 1.6\n")
-                            f.write(f"ATOM  ---------{chain} {start},{end}, {color[0]:.1f},{color[1]:.1f},{color[2]:.1f}, 1.5\n")
-                f.write(f"ATOM  -C-------{chain} 0,9999, {calpha_color[0]:.1f},{calpha_color[1]:.1f},{calpha_color[2]:.1f}, 1.6\n")
-                f.write(f"ATOM  -S-------{chain} 0,9999, {calpha_color[0]:.1f},{calpha_color[1]:.1f},{calpha_color[2]:.1f}, 1.5\n")
-                f.write(f"ATOM  ---------{chain} 0,9999, {sidechain_color[0]:.1f},{sidechain_color[1]:.1f},{sidechain_color[2]:.1f}, 1.5\n")
+                            f.write(f"ATOM  -C-------{chain} {start},{end+1}, {color[0]:.1f},{color[1]:.1f},{color[2]:.1f}, {self.carbon_radius}\n")
+                            f.write(f"ATOM  -S-------{chain} {start},{end+1}, {color[0]:.1f},{color[1]:.1f},{color[2]:.1f}, {self.carbon_radius}\n")
+                            f.write(f"ATOM  ---------{chain} {start},{end+1}, {color[0]:.1f},{color[1]:.1f},{color[2]:.1f}, {self.sidechain_radius}\n")
+                
+            for chain in chain_to_color:
+                calpha_color = chain_to_color[chain]
+                sidechain_color = alpha_blending(calpha_color, self.sidechain_transparency)
+                f.write(f"ATOM  -C-------{chain} 0,9999, {calpha_color[0]:.1f},{calpha_color[1]:.1f},{calpha_color[2]:.1f}, {self.carbon_radius}\n")
+                f.write(f"ATOM  -S-------{chain} 0,9999, {calpha_color[0]:.1f},{calpha_color[1]:.1f},{calpha_color[2]:.1f}, {self.carbon_radius}\n")
+                f.write(f"ATOM  ---------{chain} 0,9999, {sidechain_color[0]:.1f},{sidechain_color[1]:.1f},{sidechain_color[2]:.1f}, {self.sidechain_radius}\n")
+            
             f.write(f"""END
 center
 {self.center}
@@ -453,7 +465,8 @@ calculate
         self.make_command_file()
         with open(f"{self._output_prefix}.inp", 'r') as file:
             subprocess.run([self.illustrate_binary], stdin=file, check=True, stdout=subprocess.DEVNULL)
-        img = Image.open(f"{self._output_prefix}.pnm")
+        subprocess.check_call([self.convert_binary, f"{self._output_prefix}.pnm", f"{self._output_prefix}.png"])
+        img = Image.open(f"{self._output_prefix}.png")
         img = img.rotate(90, expand=True)
         self.width = self.width if self.width is not None else img.width
         self.height = self.height if self.height is not None else img.height
@@ -472,14 +485,14 @@ class PymolConfig:
     ray_opaque_background: bool = False
     cartoon_fancy_helices: bool = True
     antialias: int = 2
-    ray_trace_gain: float = 1
+    ray_trace_gain: float = 0
     ray_trace_disco_factor: int = 1
     ray_texture: int = 0
     ray_trace_fog: bool = False
     hash_max: int = 300
     depth_cue: bool = False
     ray_shadows: bool = False
-    light_count: int = 2
+    light_count: int = 1
     specular: bool = False
 
 @dataclass
@@ -488,6 +501,7 @@ class RepresentationConfig:
     pymol_config: PymolConfig
     selection: str
     transparency: float
+    color: str = None
 
 @dataclass
 class Pymol:
@@ -500,7 +514,7 @@ class Pymol:
     chain_colormap: ty.Union[str, dict] = "Set3"
     """colormap to use for coloring chains, either a matplotlib colormap or a dictionary of {chain: color}"""
     highlight_residues: dict = field(default_factory=dict)
-    """dictionary of {chain: {color: [residues]}}"""
+    """dictionary of {chain: {color: [residue numbers]}}, use None to set the color to the chain color"""
     figure_order: ty.List[RepresentationConfig] = None
     """order of representations, selections, and transparencies to layer on top of each other"""
     orient: bool = False
@@ -514,7 +528,7 @@ class Pymol:
     def __post_init__(self):
         if self.figure_order is None:
             self.figure_order = [RepresentationConfig(representation="surface",
-                                                pymol_config=PymolConfig(light_count=1), 
+                                                pymol_config=PymolConfig(), 
                                                 selection="all",
                                                 transparency=0.5), 
                                 RepresentationConfig(representation="cartoon",
@@ -522,9 +536,15 @@ class Pymol:
                                                     selection="all",
                                                     transparency=0.),
                                 RepresentationConfig(representation="stick",
+                                                pymol_config=PymolConfig(),
+                                                selection="hetatm",
+                                                transparency=0., 
+                                                color="skyblue"),]
+            if len(self.highlight_residues) > 0:
+                self.figure_order.append(RepresentationConfig(representation="stick",
                                                     pymol_config=PymolConfig(), 
                                                     selection="highlight",
-                                                    transparency=0.)]
+                                                    transparency=0.))
         pdb = pd.parsePDB(self.pdb_file)
         if self.width is None or self.height is None:
             self.width, self.height = find_size(pdb.getCoords(), self.width, self.height)
@@ -534,9 +554,11 @@ class Pymol:
         return self.output_prefix if self.output_prefix is not None else Path(self.pdb_file).stem
     
     def draw_protein(self):
+        cmd.reinitialize()
         cmd.load(self.pdb_file)
         cmd.bg_color("white")
         cmd.remove("solvent")
+        cmd.set("max_threads", 8)
         if self.orient:
             cmd.orient()
         if self.buffer is not None:
@@ -549,7 +571,10 @@ class Pymol:
             config = representation_config.pymol_config.__dict__
             for key, value in config.items():
                 if key in ["specular", "depth_cue"]:
-                    cmd.unset(key)
+                    if value:
+                        cmd.set(key)
+                    else:
+                        cmd.unset(key)
                 else:
                     cmd.set(key, value)
             cmd.hide("everything")
@@ -558,16 +583,22 @@ class Pymol:
                     for color, residues in colors.items():
                         if color is None:
                             color = chain_to_color[chain]
+                        if representation_config.color is not None:
+                            color = representation_config.color
                         color = m_colors.to_hex(color).lower()[1:]
                         cmd.select(f"highlight_{chain}_{color}", f"chain {chain} and resi {'+'.join(str(x) for x in residues)}")
                         cmd.show(representation_config.representation, f"highlight_{chain}_{color}")
-                        cmd.color(f"0x{color}", f"highlight_{chain}_{color}")
-                        util.cnc(f"highlight_{chain}_{color}")
+                        cmd.color(f"0x{color}", f"highlight_{chain}_{color}")    
             else:
                 cmd.show(representation_config.representation, representation_config.selection)
+            if representation_config.representation == "stick":
+                util.cnc(f"rep stick")
+            if representation_config.color is not None:
+                cmd.color(representation_config.color, representation_config.selection)
             cmd.ray(self.width, self.height)
             cmd.png(f"{self._output_prefix}_{representation_config.representation}.png", width=self.width, height=self.height, dpi=300)
         self.layer()
+        cmd.reinitialize()
 
     def layer(self):
         pngs = []
