@@ -253,7 +253,8 @@ class PymolRepresentationConfig:
     pymol_settings: dict
     selection: str = "all"
     transparency: float = 0.
-    color = None
+    color: str = None
+    spectrum: str = None
     dpi: int = 300
 
     

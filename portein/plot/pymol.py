@@ -54,7 +54,11 @@ class Pymol:
             self.show_highlight_representation(representation_config)
         else:
             cmd.show(representation_config.representation, representation_config.selection)
-        if representation_config.color is not None:
+        if representation_config.spectrum is not None:
+            cmd.spectrum(expression=representation_config.spectrum, 
+                         selection=representation_config.selection,
+                         palette=representation_config.color)
+        elif representation_config.color is not None:
             cmd.color(representation_config.color, representation_config.selection)
         if representation_config.representation == "sticks":
             util.cnc("rep sticks")
