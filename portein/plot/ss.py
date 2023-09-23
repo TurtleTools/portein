@@ -7,7 +7,6 @@ import typing as ty
 from dataclasses import dataclass
 from portein import config
 from portein.plot import image_utils
-from pathlib import Path
 
 SS_DICT = {
     "H": "H",
