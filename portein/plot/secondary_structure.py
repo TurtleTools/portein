@@ -25,13 +25,28 @@ SS_DICT = {
 @dataclass
 class SecondaryStructure:
     protein_config: config.ProteinConfig
-    helix_config: config.HelixConfig
-    sheet_config: config.SheetConfig
-    turn_config: config.TurnConfig
+    helix_config: config.HelixConfig = None
+    sheet_config: config.SheetConfig = None
+    turn_config: config.TurnConfig = None
+    dpi: int = 300
     coords: ty.Optional[np.ndarray] = None
     ss_elements: ty.Optional[ty.List[ty.Tuple[str, int, int]]] = None
 
+    def __post_init__(self):
+        if self.helix_config is None:
+            self.helix_config = config.HelixConfig()
+        if self.sheet_config is None:
+            self.sheet_config = config.SheetConfig()
+        if self.turn_config is None:
+            self.turn_config = config.TurnConfig()
 
+    def from_yaml(protein_config: Path, helix_config: Path, sheet_config: Path, turn_config: Path, dpi: int = 300):
+        protein = config.ProteinConfig.from_yaml(protein_config)
+        helix = config.HelixConfig.from_yaml(helix_config)
+        sheet = config.SheetConfig.from_yaml(sheet_config)
+        turn = config.TurnConfig.from_yaml(turn_config)
+        return SecondaryStructure(protein, helix, sheet, turn, dpi)
+    
     def run(self, ax=None, linear=False, y_offset=0, overwrite=False):
         """
         Plot 2D portrait of a protein
@@ -51,7 +66,7 @@ class SecondaryStructure:
         structure = self.run_dssp(overwrite=overwrite)
         self.coords, self.ss_elements = self.get_coords_and_ss_elements(structure)
         if ax is None:
-            fig, ax = plt.subplots(1, figsize=(self.protein_config.width, self.protein_config.height))
+            fig, ax = plt.subplots(1, figsize=(self.protein_config.width / self.dpi, self.protein_config.height / self.dpi), dpi=self.dpi)
         ax.axis("off")
         return self.make_patches(ax, linear, y_offset)
 

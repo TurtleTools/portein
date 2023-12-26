@@ -12,6 +12,11 @@ class Illustrate:
     protein_config: config.ProteinConfig
     illustrate_config: config.IllustrateConfig
 
+    def from_yaml(protein_config: Path, illustrate_config: Path):
+        protein = config.ProteinConfig.from_yaml(protein_config)
+        illustrate = config.IllustrateConfig.from_yaml(illustrate_config)
+        return Illustrate(protein, illustrate)
+
     def make_command_file(self):
         with open(f"{self.protein_config.output_prefix}_illustrate.inp", "w") as f:
             self.write_omit_hydrogens_and_water(f)

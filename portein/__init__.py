@@ -6,7 +6,6 @@ from portein.config import (
     SheetConfig,
     TurnConfig,
     PymolConfig,
-    PymolRepresentationConfig,
     IllustrateConfig,
     ProteinConfig,
 )
@@ -43,7 +42,6 @@ __all__ = [
     # pymol related
     "Pymol",
     "PymolConfig",
-    "PymolRepresentationConfig",
 
     # illustrate related
     "Illustrate",

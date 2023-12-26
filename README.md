@@ -1,8 +1,3 @@
-```python
-%load_ext autoreload
-%autoreload 2
-```
-
 # Portein
 ## Portraits of Proteins
 
@@ -33,7 +28,7 @@ old_coords = pdb.select("protein and calpha").getCoords()
 
 # Rotate the protein
 pdb_oriented = portein.rotate_protein(pdb)
-pd.writePDB("images/7lc2_rotated.pdb", pdb_oriented)
+pd.writePDB("examples/7lc2_rotated.pdb", pdb_oriented)
 new_coords = pdb_oriented.select("protein and calpha").getCoords()
 
 # Find the best size of the plot based on the coordinates and a given height (or width)
@@ -52,9 +47,13 @@ ax[1].axis("off")
 plt.tight_layout()
 ```
     
-![png](images/README_files/images/README_6_0.png)
+![png](examples/README_files/images/README_6_0.png)
     
+You can save an oriented version of your protein from the command line as follows:
 
+```sh
+portein rotate 7lc2
+```
 
 ## Plot Pymol ray-traced images
 
@@ -93,21 +92,35 @@ pymol_settings
 
 ```python
 # Rotate the protein, set the width of the plot (height is auto-calculated), and the colormap for the chains (can also be a dictionary of chain: color)
-protein_config = portein.ProteinConfig(pdb_file="7lc2", rotate=True, width=1000, chain_colormap="Set3", output_prefix="images/7lc2")
-
-# Single layer of cartoon representation
-pymol_config = portein.PymolConfig(layers=[portein.PymolRepresentationConfig(representation="cartoon",
-                                                                             pymol_settings=pymol_settings)])
+protein_config = portein.ProteinConfig(pdb_file="7lc2", rotate=True, width=1000, chain_colormap="Set3", output_prefix="examples/7lc2_simple")
+pymol_class = portein.Pymol(protein=protein_config, 
+                            # Single layer of cartoon representation
+                            layers=[portein.PymolConfig(representation="cartoon", pymol_settings=pymol_settings)])
 
 # Run PyMOL
-pymol_class = portein.Pymol(protein_config=protein_config, pymol_config=pymol_config)
 image_file = pymol_class.run()
 ```
 
      Ray: render time: 6.57 sec. = 548.2 frames/hour (13.15 sec. accum.).
 
 
-![Simple Pymol example](images/7lc2_rotated_pymol.png)
+![Simple Pymol example](examples/7lc2_simple_rotated_pymol.png)
+
+To do this from the command line, you need a YAML file with info about the protein:
+
+```YAML
+pdb_file: 7lc2
+rotate: true
+width: 1000
+chain_colormap: Set3
+output_prefix: examples/7lc2_simple
+```
+
+And then:
+
+```sh
+portein pymol examples/protein_example_simple.yaml
+```
 
 Here's a fancier version with three layers:
 - Layer 1 is surface at 0.5 opacity
@@ -118,23 +131,16 @@ The `selection` attribute can also be any kind of Pymol selection ("all" by defa
 
 
 ```python
-
-protein_config = portein.ProteinConfig(pdb_file="7lc2", rotate=True, output_prefix="images/7lc2_fancy",
+protein_config = portein.ProteinConfig(pdb_file="7lc2", rotate=True, output_prefix="examples/7lc2",
                                        chain_colormap="Set3", 
                                        highlight_residues={"A": {"black": [30, 35], "red": list(range(10,20))},
                                                            "B": {"black": [25], "red": list(range(10, 16))}},
                                        width=1000)
-pymol_config = portein.PymolConfig(layers=[portein.PymolRepresentationConfig(representation="surface",
-                                                                             pymol_settings=pymol_settings,
-                                                                             transparency=0.5),
-                                            portein.PymolRepresentationConfig(representation="cartoon",
-                                                                                pymol_settings=pymol_settings),
-                                            portein.PymolRepresentationConfig(representation="sticks",
-                                                                                pymol_settings=pymol_settings,
-                                                                                selection="highlight"),
-                                                                        ],
-                                    buffer=10)
-pymol_class = portein.Pymol(protein_config=protein_config, pymol_config=pymol_config)
+layers = [portein.PymolConfig(representation="surface", pymol_settings=pymol_settings, transparency=0.5),
+          portein.PymolConfig(representation="cartoon", pymol_settings=pymol_settings),
+          portein.PymolConfig(representation="sticks", pymol_settings=pymol_settings, selection="highlight")]
+
+pymol_class = portein.Pymol(protein=protein_config, layers=layers, buffer=10)
 image_file = pymol_class.run()
 ```
 
@@ -143,7 +149,13 @@ image_file = pymol_class.run()
      Ray: render time: 0.45 sec. = 8005.3 frames/hour (103.23 sec. accum.).
 
 
-![Fancy Pymol example](images/7lc2_fancy_rotated_pymol.png)
+![Pymol example](examples/7lc2_rotated_pymol.png)
+
+This can also be achieved from the command line using YAML config files
+
+```sh
+portein pymol examples/protein_example.yaml examples/pymol_layers_example.yaml --buffer 10
+```
 
 ## Plot `illustrate` images
 
@@ -153,7 +165,7 @@ Uses David Goodsell's [`illustrate`](https://github.com/ccsb-scripps/Illustrate)
 
 
 ```python
-protein_config = portein.ProteinConfig(pdb_file="7lc2", rotate=True, output_prefix="images/7lc2",
+protein_config = portein.ProteinConfig(pdb_file="7lc2", rotate=True, output_prefix="examples/7lc2",
                                        chain_colormap="Set3", 
                                        highlight_residues={"A": {"black": [30, 35], "red": list(range(10,20))},
                                                            "B": {"black": [25], "red": list(range(10, 16))}},
@@ -163,7 +175,15 @@ illustrate = portein.Illustrate(protein_config=protein_config, illustrate_config
 image_file = illustrate.run()
 ```
 
-![Illustrate example](images/7lc2_rotated_illustrate.png)
+![Illustrate example](examples/7lc2_rotated_illustrate.png)
+
+From the command line:
+```sh
+portein illustrate examples/protein_example.yaml
+```
+
+You can pass the illustrate config file as the second argument (See `configs/illustrate.yaml`for defaults)
+
 
 ## Plot secondary structure topology diagram
 
@@ -178,7 +198,7 @@ See the `configs` folder for parameter settings available for each plot type.
 
 
 ```python
-protein_config = portein.ProteinConfig(pdb_file="7lc2", rotate=True, height=10, output_prefix="images/7lc2")
+protein_config = portein.ProteinConfig(pdb_file="7lc2", rotate=True, height=10, output_prefix="examples/7lc2")
 ss = portein.SecondaryStructure(protein_config=protein_config, 
                                 helix_config=portein.HelixConfig(), 
                                 sheet_config=portein.SheetConfig(), 
@@ -186,12 +206,17 @@ ss = portein.SecondaryStructure(protein_config=protein_config,
 ss.run()
 ```
     
-![png](images/README_files/images/README_19_1.png)
+![png](examples/README_files/images/README_19_1.png)
     
+And from the command line:
+
+```sh
+portein secondary examples/protein_example.yaml --dpi=100
+```
+Use `-h`, `-s` and `-t` to pass helix, turn, and sheet config files
 
 
 Modify the figure e.g to highlight specific residues using the returned Axes object:
-
 
 ```python
 ax = ss.run()
@@ -203,7 +228,7 @@ ax.scatter(ss.coords[highlight_residues, 0],
            edgecolor="black", linewidth=2)
 ```
     
-![png](images/README_files/images/README_21_1.png)
+![png](examples/README_files/images/README_21_1.png)
     
 
 
@@ -215,6 +240,6 @@ fig, ax = plt.subplots(1, figsize=(50, 1))
 ss.run(ax=ax, linear=True)
 ```
     
-![png](images/README_files/images/README_23_1.png)
+![png](examples/README_files/images/README_23_1.png)
     
 

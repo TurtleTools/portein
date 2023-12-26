@@ -1,0 +1,5 @@
+pdb_file: 7lc2
+rotate: true
+width: 1000
+chain_colormap: Set3
+output_prefix: examples/7lc2_simple
