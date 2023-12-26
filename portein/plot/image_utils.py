@@ -2,6 +2,7 @@ import numpy as np
 from PIL import Image
 import typing as ty
 
+
 def update_limits(sx, sy, ex, ey, min_x, min_y, max_x, max_y):
     min_x = min(sx, min_x)
     min_x = min(ex, min_x)
@@ -13,6 +14,7 @@ def update_limits(sx, sy, ex, ey, min_x, min_y, max_x, max_y):
     max_y = max(ey, max_y)
     return min_x, min_y, max_x, max_y
 
+
 def put_alpha(img: Image, transparency: float):
     im2 = img.copy()
     im2.putalpha(int(255 * (1 - transparency)))
@@ -21,10 +23,12 @@ def put_alpha(img: Image, transparency: float):
 
 
 def alpha_blending(color, alpha: float):
-    return tuple( (1. -  alpha) + np.array(color)*alpha )
+    return tuple((1.0 - alpha) + np.array(color) * alpha)
 
 
-def find_size(points, width: ty.Optional[float] = None, height: ty.Optional[float] = None):
+def find_size(
+    points, width: ty.Optional[float] = None, height: ty.Optional[float] = None
+):
     """
     Find figure size given coordinates and size of one dimension.
     Calculates height from width if height=None and width from height if width=None
@@ -40,7 +44,7 @@ def find_size(points, width: ty.Optional[float] = None, height: ty.Optional[floa
     (width, height)
     """
     assert (
-            width is not None or height is not None
+        width is not None or height is not None
     ), "Either one of height or width must be set"
     if height is not None and width is not None:
         return width, height

@@ -32,17 +32,14 @@ __all__ = [
     "rotate",
     "config",
     "ProteinConfig",
-
     # secondary structure related
     "SecondaryStructure",
     "HelixConfig",
     "SheetConfig",
     "TurnConfig",
-
     # pymol related
     "Pymol",
     "PymolConfig",
-
     # illustrate related
     "Illustrate",
     "IllustrateConfig",

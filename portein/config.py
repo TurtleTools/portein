@@ -12,6 +12,7 @@ from matplotlib import colors as m_colors
 from portein.rotate import rotate_protein
 import yaml
 
+
 @dataclass
 class HelixConfig:
     """
@@ -49,8 +50,8 @@ class HelixConfig:
     def change_width(self, width=1.0):
         self.cylinder_ellipse_length = width / 2
         self.cylinder_ellipse_height = width - 0.001
-        self.cylinder_rectangle_height=width
-        self.wave_arc_height=width
+        self.cylinder_rectangle_height = width
+        self.wave_arc_height = width
 
     @classmethod
     def from_yaml(cls, yaml_str: typing.Union[str, Path]):
@@ -152,7 +153,9 @@ class ProteinConfig:
     """prefix for output files. If None uses the PDB file name"""
     chain_colormap: typing.Union[str, typing.Dict[str, ColorType]] = "Set3"
     """colormap to use for coloring chains, either a matplotlib colormap or a dictionary of {chain: color}"""
-    highlight_residues: typing.Dict[str, typing.Dict[ColorType, typing.List[int]]] = None
+    highlight_residues: typing.Dict[
+        str, typing.Dict[ColorType, typing.List[int]]
+    ] = None
     """dictionary of {chain: {color: [residue numbers]}}, use None to set the color to the chain color"""
     width: int = 1000
     """width of image (in pixels)"""
@@ -160,7 +163,9 @@ class ProteinConfig:
     """height of image"""
     chain_to_color: typing.Dict[str, ColorType] = None
     """dictionary of {chain: color}"""
-    chain_to_residue_range_color: typing.Dict[str, typing.Dict[typing.Tuple[int, int], ColorType]] = None
+    chain_to_residue_range_color: typing.Dict[
+        str, typing.Dict[typing.Tuple[int, int], ColorType]
+    ] = None
     """dictionary of {chain: {residue_range: color}}"""
 
     def __post_init__(self):
@@ -173,9 +178,9 @@ class ProteinConfig:
             self.output_prefix = Path(self.pdb_file).stem
         if self.rotate:
             self.save_rotated()
-        self.width, self.height = image_utils.find_size(self.pdb.getCoords(), 
-                                                        width=self.width, 
-                                                        height=self.height)
+        self.width, self.height = image_utils.find_size(
+            self.pdb.getCoords(), width=self.width, height=self.height
+        )
         if self.highlight_residues is None:
             self.highlight_residues = {}
         if self.chain_to_color is None:
@@ -197,14 +202,13 @@ class ProteinConfig:
     @property
     def pdb(self):
         return pd.parsePDB(str(self.pdb_file))
-    
+
     def save_rotated(self):
         pdb = rotate_protein(self.pdb)
         self.output_prefix = f"{self.output_prefix}_rotated"
         pd.writePDB(f"{self.output_prefix}.pdb", pdb)
         self.pdb_file = f"{self.output_prefix}.pdb"
-    
-    
+
     def get_chain_colors(self):
         if isinstance(self.chain_colormap, str):
             chain_to_color = {}
@@ -216,9 +220,11 @@ class ProteinConfig:
                 else:
                     chain_to_color[chain] = colormap(i)
         else:
-            chain_to_color = {c: m_colors.to_rgb(self.chain_colormap[c]) for c in self.chain_colormap}
+            chain_to_color = {
+                c: m_colors.to_rgb(self.chain_colormap[c]) for c in self.chain_colormap
+            }
         return chain_to_color
-        
+
     def get_residues_colors(self):
         chain_to_residue_range_color = {}
         for chain in self.highlight_residues:
@@ -231,7 +237,7 @@ class ProteinConfig:
                     residue_ranges.append((group[0], group[-1]))
                 chain_to_residue_range_color[chain][color] = residue_ranges
         return chain_to_residue_range_color
-    
+
 
 PYMOL_SETTINGS = dict(
     ambient=0.5,
@@ -253,19 +259,29 @@ PYMOL_SETTINGS = dict(
     surface_quality=2,
 )
 
+
 @dataclass
 class PymolConfig:
     representation: str = "cartoon"
     pymol_settings: dict = None
     selection: str = "all"
-    transparency: float = 0.
+    transparency: float = 0.0
     color: ColorType = None
     spectrum: str = None
     dpi: int = 300
 
-    
     def __post_init__(self):
-        if self.representation not in ['cartoon', 'surface', 'sticks', 'spheres', 'lines', 'mesh', 'dots', 'ribbon', 'nonbonded']:
+        if self.representation not in [
+            "cartoon",
+            "surface",
+            "sticks",
+            "spheres",
+            "lines",
+            "mesh",
+            "dots",
+            "ribbon",
+            "nonbonded",
+        ]:
             raise ValueError(f"{self.representation} is not a valid representation")
         if self.pymol_settings is None:
             self.pymol_settings = PYMOL_SETTINGS.copy()
@@ -280,7 +296,7 @@ class PymolConfig:
         if Path(yaml_str).is_file():
             yaml_str = Path(yaml_str).read_text()
         return cls(**yaml.load(yaml_str, Loader=loader))
-    
+
     @classmethod
     def _from_yaml(cls, loader, node):
         data = loader.construct_mapping(node)
@@ -293,13 +309,13 @@ class IllustrateConfig:
     """path to illustrate binary"""
     convert_binary: str = "convert"
     """path to convert binary"""
-    center: str = 'auto'
+    center: str = "auto"
     """center of the image, one of 'auto' or 'center'"""
-    translation: typing.Tuple[float, float, float] = (0., 0., 0.)
+    translation: typing.Tuple[float, float, float] = (0.0, 0.0, 0.0)
     """translation x, y, z in Angstroms"""
     scale: float = 10.0
     """scale (pixels/Angstrom), controls size of image"""
-    rotation: typing.Tuple[float, float, float] = (0., 0., 0.)
+    rotation: typing.Tuple[float, float, float] = (0.0, 0.0, 0.0)
     """rotation x, y, z in degrees"""
     background_color: ColorType = "white"
     """background color"""

@@ -6,11 +6,13 @@ from portein import config
 from portein.plot import image_utils
 import typing
 import yaml
+
 try:
     from pymol import cmd, util
 except ImportError:
     print("Warning: pymol not installed, cannot use Pymol class")
     pass
+
 
 @dataclass
 class Pymol:
@@ -55,10 +57,12 @@ class Pymol:
         cmd.hide("everything")
         self.show(layer=layer)
         cmd.ray(self.protein.width, self.protein.height)
-        cmd.png(f"{self.protein.output_prefix}_{index}_pymol.png", 
-                width=self.protein.width, 
-                height=self.protein.height, 
-                dpi=layer.dpi)
+        cmd.png(
+            f"{self.protein.output_prefix}_{index}_pymol.png",
+            width=self.protein.width,
+            height=self.protein.height,
+            dpi=layer.dpi,
+        )
 
     @staticmethod
     def change_settings(pymol_settings):
@@ -77,12 +81,13 @@ class Pymol:
         else:
             cmd.show(layer.representation, layer.selection)
         if layer.spectrum is not None:
-            cmd.spectrum(expression=layer.spectrum, 
-                         selection=layer.selection,
-                         palette=layer.color)
+            cmd.spectrum(
+                expression=layer.spectrum,
+                selection=layer.selection,
+                palette=layer.color,
+            )
         elif layer.color is not None:
-            cmd.color(f"0x{m_colors.to_hex(layer.color).lower()[1:]}", 
-                      layer.selection)
+            cmd.color(f"0x{m_colors.to_hex(layer.color).lower()[1:]}", layer.selection)
         if layer.representation == "sticks":
             util.cnc("rep sticks")
 
@@ -94,10 +99,12 @@ class Pymol:
                 if layer.color is not None:
                     color = layer.color
                 color = m_colors.to_hex(color).lower()[1:]
-                cmd.select(f"highlight_{chain}_{color}", f"chain {chain} and resi {'+'.join(str(x) for x in residues)}")
+                cmd.select(
+                    f"highlight_{chain}_{color}",
+                    f"chain {chain} and resi {'+'.join(str(x) for x in residues)}",
+                )
                 cmd.show(layer.representation, f"highlight_{chain}_{color}")
                 cmd.color(f"0x{color}", f"highlight_{chain}_{color}")
-        
 
     def layer_images(self, remove_intermediate_files=True):
         pngs = []
@@ -105,10 +112,10 @@ class Pymol:
             img = Image.open(f"{self.protein.output_prefix}_{index}_pymol.png")
             pngs.append(image_utils.put_alpha(img, layer.transparency))
             if remove_intermediate_files:
-                Path(f"{self.protein.output_prefix}_{index}_pymol.png").unlink() 
+                Path(f"{self.protein.output_prefix}_{index}_pymol.png").unlink()
         image = Image.new("RGBA", pngs[0].size)
         for png in pngs:
             image = Image.alpha_composite(image, png)
         image_file = f"{self.protein.output_prefix}_pymol.png"
-        image.save(image_file) 
+        image.save(image_file)
         return image_file
