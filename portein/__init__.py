@@ -6,7 +6,6 @@ from portein.config import (
     SheetConfig,
     TurnConfig,
     PymolConfig,
-    PymolRepresentationConfig,
     IllustrateConfig,
     ProteinConfig,
 )
@@ -33,18 +32,14 @@ __all__ = [
     "rotate",
     "config",
     "ProteinConfig",
-
     # secondary structure related
     "SecondaryStructure",
     "HelixConfig",
     "SheetConfig",
     "TurnConfig",
-
     # pymol related
     "Pymol",
     "PymolConfig",
-    "PymolRepresentationConfig",
-
     # illustrate related
     "Illustrate",
     "IllustrateConfig",

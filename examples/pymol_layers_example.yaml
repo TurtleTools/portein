@@ -1,0 +1,41 @@
+- !PymolConfig
+  color: null
+  dpi: 300
+  pymol_settings: &id001
+    ambient: 0.5
+    antialias: 2
+    cartoon_discrete_colors: true
+    cartoon_fancy_helices: true
+    cartoon_sampling: 20
+    depth_cue: false
+    hash_max: 300
+    light_count: 1
+    ray_opaque_background: false
+    ray_shadows: false
+    ray_texture: 0
+    ray_trace_disco_factor: 1
+    ray_trace_fog: false
+    ray_trace_gain: 0
+    ray_trace_mode: 1
+    specular: false
+    surface_quality: 2
+  representation: surface
+  selection: all
+  spectrum: null
+  transparency: 0.5
+- !PymolConfig
+  color: null
+  dpi: 300
+  pymol_settings: *id001
+  representation: cartoon
+  selection: all
+  spectrum: null
+  transparency: 0.0
+- !PymolConfig
+  color: null
+  dpi: 300
+  pymol_settings: *id001
+  representation: sticks
+  selection: highlight
+  spectrum: null
+  transparency: 0.0

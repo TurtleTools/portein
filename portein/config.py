@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from pathlib import Path
 import typing
+
+from matplotlib.typing import ColorType
 from portein.plot import image_utils
 import prody as pd
 from matplotlib import colormaps
@@ -9,6 +11,7 @@ from operator import itemgetter
 from matplotlib import colors as m_colors
 from portein.rotate import rotate_protein
 import yaml
+
 
 @dataclass
 class HelixConfig:
@@ -40,24 +43,28 @@ class HelixConfig:
     wave_arc_height: float = 1.0
     wave_arc_length: float = 0.5
     outline_width: float = 3.0
-    outline_color = "#5c6887"
-    color = "lightsteelblue"
+    outline_color: ColorType = "#5c6887"
+    color: ColorType = "lightsteelblue"
     opacity: float = 1.0
 
     def change_width(self, width=1.0):
         self.cylinder_ellipse_length = width / 2
         self.cylinder_ellipse_height = width - 0.001
-        self.cylinder_rectangle_height=width
-        self.wave_arc_height=width
+        self.cylinder_rectangle_height = width
+        self.wave_arc_height = width
 
     @classmethod
     def from_yaml(cls, yaml_str: typing.Union[str, Path]):
         """
-        Create a ProteinConfig from a yaml string or file
+        Create from a yaml string or file
         """
+        if yaml_str is None:
+            return cls()
+        loader = yaml.SafeLoader
+        loader.add_constructor("!ColorType", ColorType)
         if Path(yaml_str).is_file():
             yaml_str = Path(yaml_str).read_text()
-        return cls(**yaml.safe_load(yaml_str))
+        return cls(**yaml.load(yaml_str, Loader=loader))
 
 
 @dataclass
@@ -80,18 +87,22 @@ class SheetConfig:
     tail_height: float = 1.0
     head_height: float = 2.0
     outline_width: float = 3.0
-    outline_color = "#5c6887"
-    color = "#999FD0"
+    outline_color: ColorType = "#5c6887"
+    color: ColorType = "#999FD0"
     opacity: float = 1.0
 
     @classmethod
     def from_yaml(cls, yaml_str: typing.Union[str, Path]):
         """
-        Create a ProteinConfig from a yaml string or file
+        Create from a yaml string or file
         """
+        if yaml_str is None:
+            return cls()
+        loader = yaml.SafeLoader
+        loader.add_constructor("!ColorType", ColorType)
         if Path(yaml_str).is_file():
             yaml_str = Path(yaml_str).read_text()
-        return cls(**yaml.safe_load(yaml_str))
+        return cls(**yaml.load(yaml_str, Loader=loader))
 
 
 @dataclass
@@ -113,19 +124,23 @@ class TurnConfig:
     thickness_factor: float = 0.5
     height: float = 0.5
     circle_radius: float = 0.2
-    circle_color = "#d1d6e3"
+    circle_color: ColorType = "#d1d6e3"
     arc_width: float = 3.0
-    arc_color = "#d1d6e3"
+    arc_color: ColorType = "#d1d6e3"
     opacity: float = 0.8
 
     @classmethod
     def from_yaml(cls, yaml_str: typing.Union[str, Path]):
         """
-        Create a ProteinConfig from a yaml string or file
+        Create from a yaml string or file
         """
+        if yaml_str is None:
+            return cls()
+        loader = yaml.SafeLoader
+        loader.add_constructor("!ColorType", ColorType)
         if Path(yaml_str).is_file():
             yaml_str = Path(yaml_str).read_text()
-        return cls(**yaml.safe_load(yaml_str))
+        return cls(**yaml.load(yaml_str, Loader=loader))
 
 
 @dataclass
@@ -136,17 +151,21 @@ class ProteinConfig:
     """rotate the protein to have the best orientation"""
     output_prefix: str = None
     """prefix for output files. If None uses the PDB file name"""
-    chain_colormap: typing.Union[str, typing.Dict] = "Set3"
+    chain_colormap: typing.Union[str, typing.Dict[str, ColorType]] = "Set3"
     """colormap to use for coloring chains, either a matplotlib colormap or a dictionary of {chain: color}"""
-    highlight_residues: typing.Dict = None
+    highlight_residues: typing.Dict[
+        str, typing.Dict[ColorType, typing.List[int]]
+    ] = None
     """dictionary of {chain: {color: [residue numbers]}}, use None to set the color to the chain color"""
-    width: int = None
-    """width of image"""
+    width: int = 1000
+    """width of image (in pixels)"""
     height: int = None
     """height of image"""
-    chain_to_color: typing.Dict = None
+    chain_to_color: typing.Dict[str, ColorType] = None
     """dictionary of {chain: color}"""
-    chain_to_residue_range_color: typing.Dict = None
+    chain_to_residue_range_color: typing.Dict[
+        str, typing.Dict[typing.Tuple[int, int], ColorType]
+    ] = None
     """dictionary of {chain: {residue_range: color}}"""
 
     def __post_init__(self):
@@ -159,9 +178,9 @@ class ProteinConfig:
             self.output_prefix = Path(self.pdb_file).stem
         if self.rotate:
             self.save_rotated()
-        self.width, self.height = image_utils.find_size(self.pdb.getCoords(), 
-                                                        width=self.width, 
-                                                        height=self.height)
+        self.width, self.height = image_utils.find_size(
+            self.pdb.getCoords(), width=self.width, height=self.height
+        )
         if self.highlight_residues is None:
             self.highlight_residues = {}
         if self.chain_to_color is None:
@@ -172,23 +191,24 @@ class ProteinConfig:
     @classmethod
     def from_yaml(cls, yaml_str: typing.Union[str, Path]):
         """
-        Create a ProteinConfig from a yaml string or file
+        Create from a yaml string or file
         """
+        loader = yaml.SafeLoader
+        loader.add_constructor("!ColorType", ColorType)
         if Path(yaml_str).is_file():
             yaml_str = Path(yaml_str).read_text()
-        return cls(**yaml.safe_load(yaml_str))
+        return cls(**yaml.load(yaml_str, Loader=loader))
 
     @property
     def pdb(self):
         return pd.parsePDB(str(self.pdb_file))
-    
+
     def save_rotated(self):
         pdb = rotate_protein(self.pdb)
         self.output_prefix = f"{self.output_prefix}_rotated"
         pd.writePDB(f"{self.output_prefix}.pdb", pdb)
         self.pdb_file = f"{self.output_prefix}.pdb"
-    
-    
+
     def get_chain_colors(self):
         if isinstance(self.chain_colormap, str):
             chain_to_color = {}
@@ -200,9 +220,11 @@ class ProteinConfig:
                 else:
                     chain_to_color[chain] = colormap(i)
         else:
-            chain_to_color = {c: m_colors.to_rgb(self.chain_colormap[c]) for c in self.chain_colormap}
+            chain_to_color = {
+                c: m_colors.to_rgb(self.chain_colormap[c]) for c in self.chain_colormap
+            }
         return chain_to_color
-        
+
     def get_residues_colors(self):
         chain_to_residue_range_color = {}
         for chain in self.highlight_residues:
@@ -215,80 +237,71 @@ class ProteinConfig:
                     residue_ranges.append((group[0], group[-1]))
                 chain_to_residue_range_color[chain][color] = residue_ranges
         return chain_to_residue_range_color
-    
 
-class PymolLayerConfig:
-    ray_trace_mode: int = 1
-    surface_quality: int = 2
-    cartoon_sampling: int = 20
-    ambient: float = 0.5
-    cartoon_discrete_colors: bool = True
-    ray_opaque_background: bool = False
-    cartoon_fancy_helices: bool = True
-    antialias: int = 2
-    ray_trace_gain: float = 0
-    ray_trace_disco_factor: int = 1
-    ray_texture: int = 0
-    ray_trace_fog: bool = False
-    hash_max: int = 300
-    depth_cue: bool = False
-    ray_shadows: bool = False
-    light_count: int = 1
-    specular: bool = False
-    cartoon_smooth_loops: bool = False
 
-    @classmethod
-    def from_yaml(cls, yaml_str: typing.Union[str, Path]):
-        """
-        Create a ProteinConfig from a yaml string or file
-        """
-        if Path(yaml_str).is_file():
-            yaml_str = Path(yaml_str).read_text()
-        return cls(**yaml.safe_load(yaml_str))
-    
-
-@dataclass
-class PymolRepresentationConfig:
-    representation: str
-    pymol_settings: dict
-    selection: str = "all"
-    transparency: float = 0.
-    color: str = None
-    spectrum: str = None
-    dpi: int = 300
-
-    
-    def __post_init__(self):
-        if self.representation not in ['cartoon', 'surface', 'sticks', 'spheres', 'lines', 'mesh', 'dots', 'ribbon', 'nonbonded']:
-            raise ValueError(f"{self.representation} is not a valid representation")
-
-    @classmethod
-    def from_yaml(cls, yaml_str: typing.Union[str, Path]):
-        """
-        Create a ProteinConfig from a yaml string or file
-        """
-        if Path(yaml_str).is_file():
-            yaml_str = Path(yaml_str).read_text()
-        return cls(**yaml.safe_load(yaml_str))
+PYMOL_SETTINGS = dict(
+    ambient=0.5,
+    antialias=2,
+    cartoon_discrete_colors=True,
+    cartoon_fancy_helices=True,
+    cartoon_sampling=20,
+    depth_cue=False,
+    hash_max=300,
+    light_count=1,
+    ray_opaque_background=False,
+    ray_shadows=False,
+    ray_texture=0,
+    ray_trace_disco_factor=1,
+    ray_trace_fog=False,
+    ray_trace_gain=0,
+    ray_trace_mode=1,
+    specular=False,
+    surface_quality=2,
+)
 
 
 @dataclass
 class PymolConfig:
-    pymol_binary: str = "pymol"
-    """path to pymol binary"""
-    layers: typing.List[PymolRepresentationConfig] = None
-    """order of representations, selections, and transparencies to layer on top of each other"""
-    buffer: float = None
-    """buffer around the molecule in Angstroms"""
+    representation: str = "cartoon"
+    pymol_settings: dict = None
+    selection: str = "all"
+    transparency: float = 0.0
+    color: ColorType = None
+    spectrum: str = None
+    dpi: int = 300
+
+    def __post_init__(self):
+        if self.representation not in [
+            "cartoon",
+            "surface",
+            "sticks",
+            "spheres",
+            "lines",
+            "mesh",
+            "dots",
+            "ribbon",
+            "nonbonded",
+        ]:
+            raise ValueError(f"{self.representation} is not a valid representation")
+        if self.pymol_settings is None:
+            self.pymol_settings = PYMOL_SETTINGS.copy()
 
     @classmethod
     def from_yaml(cls, yaml_str: typing.Union[str, Path]):
         """
-        Create a ProteinConfig from a yaml string or file
+        Create from a yaml string or file
         """
+        loader = yaml.SafeLoader
+        loader.add_constructor("!ColorType", ColorType)
         if Path(yaml_str).is_file():
             yaml_str = Path(yaml_str).read_text()
-        return cls(**yaml.safe_load(yaml_str))
+        return cls(**yaml.load(yaml_str, Loader=loader))
+
+    @classmethod
+    def _from_yaml(cls, loader, node):
+        data = loader.construct_mapping(node)
+        return cls(**data)
+
 
 @dataclass
 class IllustrateConfig:
@@ -296,17 +309,17 @@ class IllustrateConfig:
     """path to illustrate binary"""
     convert_binary: str = "convert"
     """path to convert binary"""
-    center: str = 'auto'
+    center: str = "auto"
     """center of the image, one of 'auto' or 'center'"""
-    translation: typing.Tuple[float, float, float] = (0., 0., 0.)
+    translation: typing.Tuple[float, float, float] = (0.0, 0.0, 0.0)
     """translation x, y, z in Angstroms"""
     scale: float = 10.0
     """scale (pixels/Angstrom), controls size of image"""
-    rotation: typing.Tuple[float, float, float] = (0., 0., 0.)
+    rotation: typing.Tuple[float, float, float] = (0.0, 0.0, 0.0)
     """rotation x, y, z in degrees"""
-    background_color = "white"
+    background_color: ColorType = "white"
     """background color"""
-    fog_color = "white"
+    fog_color: ColorType = "white"
     """fog color"""
     fog_front_transparency: float = 1.0
     """fractional transparency of fog at front of molecule (0.0-1.0, 1.0=no fog)"""
@@ -355,8 +368,12 @@ class IllustrateConfig:
     @classmethod
     def from_yaml(cls, yaml_str: typing.Union[str, Path]):
         """
-        Create a ProteinConfig from a yaml string or file
+        Create from a yaml string or file
         """
+        if yaml_str is None:
+            return cls()
+        loader = yaml.SafeLoader
+        loader.add_constructor("!ColorType", ColorType)
         if Path(yaml_str).is_file():
             yaml_str = Path(yaml_str).read_text()
-        return cls(**yaml.safe_load(yaml_str))
+        return cls(**yaml.load(yaml_str, Loader=loader))

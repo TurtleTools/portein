@@ -86,25 +86,25 @@ def find_best_projection(points):
         return matrix
     theta = np.arccos(np.dot(new_axis, k))
     b = np.cross(k, new_axis)
-    b_hat = b / np.sqrt(np.sum(b ** 2))
+    b_hat = b / np.sqrt(np.sum(b**2))
     q0 = np.cos(theta / 2)
     q1, q2, q3 = np.sin(theta / 2) * b_hat
     quaternion = np.array(
         [
             (
-                q0 ** 2 + q1 ** 2 - q2 ** 2 - q3 ** 2,
+                q0**2 + q1**2 - q2**2 - q3**2,
                 2 * (q1 * q2 - q0 * q3),
                 2 * (q1 * q3 + q0 * q2),
             ),
             (
                 2 * (q2 * q1 + q0 * q3),
-                q0 ** 2 - q1 ** 2 + q2 ** 2 - q3 ** 2,
+                q0**2 - q1**2 + q2**2 - q3**2,
                 2 * (q2 * q3 - q0 * q1),
             ),
             (
                 2 * (q3 * q1 - q0 * q2),
                 2 * (q3 * q2 + q0 * q1),
-                q0 ** 2 - q1 ** 2 - q2 ** 2 + q3 ** 2,
+                q0**2 - q1**2 - q2**2 + q3**2,
             ),
         ]
     )
@@ -135,7 +135,7 @@ def rotate_to_maximize_bb_height(points):
     corners = np.dot(corners, vectors.T)
     side_1 = corners[0] - corners[1]
     side_2 = corners[1] - corners[2]
-    if np.sum(side_1 ** 2) > np.sum(side_2 ** 2):
+    if np.sum(side_1**2) > np.sum(side_2**2):
         theta = np.arctan2(side_1[0], side_1[1])
     else:
         theta = np.arctan2(side_2[0], side_2[1])

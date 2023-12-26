@@ -1,0 +1,32 @@
+pdb_file: 7lc2
+rotate: true
+width: 1000
+chain_colormap: Set3
+output_prefix: examples/7lc2
+highlight_residues:
+  A:
+    black:
+    - 30
+    - 35
+    red:
+    - 10
+    - 11
+    - 12
+    - 13
+    - 14
+    - 15
+    - 16
+    - 17
+    - 18
+    - 19
+  B:
+    black:
+    - 25
+    red:
+    - 10
+    - 11
+    - 12
+    - 13
+    - 14
+    - 15
+

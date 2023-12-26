@@ -25,12 +25,33 @@ SS_DICT = {
 @dataclass
 class SecondaryStructure:
     protein_config: config.ProteinConfig
-    helix_config: config.HelixConfig
-    sheet_config: config.SheetConfig
-    turn_config: config.TurnConfig
+    helix_config: config.HelixConfig = None
+    sheet_config: config.SheetConfig = None
+    turn_config: config.TurnConfig = None
+    dpi: int = 300
     coords: ty.Optional[np.ndarray] = None
     ss_elements: ty.Optional[ty.List[ty.Tuple[str, int, int]]] = None
 
+    def __post_init__(self):
+        if self.helix_config is None:
+            self.helix_config = config.HelixConfig()
+        if self.sheet_config is None:
+            self.sheet_config = config.SheetConfig()
+        if self.turn_config is None:
+            self.turn_config = config.TurnConfig()
+
+    def from_yaml(
+        protein_config: Path,
+        helix_config: Path,
+        sheet_config: Path,
+        turn_config: Path,
+        dpi: int = 300,
+    ):
+        protein = config.ProteinConfig.from_yaml(protein_config)
+        helix = config.HelixConfig.from_yaml(helix_config)
+        sheet = config.SheetConfig.from_yaml(sheet_config)
+        turn = config.TurnConfig.from_yaml(turn_config)
+        return SecondaryStructure(protein, helix, sheet, turn, dpi)
 
     def run(self, ax=None, linear=False, y_offset=0, overwrite=False):
         """
@@ -51,15 +72,20 @@ class SecondaryStructure:
         structure = self.run_dssp(overwrite=overwrite)
         self.coords, self.ss_elements = self.get_coords_and_ss_elements(structure)
         if ax is None:
-            fig, ax = plt.subplots(1, figsize=(self.protein_config.width, self.protein_config.height))
+            fig, ax = plt.subplots(
+                1,
+                figsize=(
+                    self.protein_config.width / self.dpi,
+                    self.protein_config.height / self.dpi,
+                ),
+                dpi=self.dpi,
+            )
         ax.axis("off")
         return self.make_patches(ax, linear, y_offset)
 
-    def make_patches(self,
-                     ax: plt.Axes, 
-                     linear: bool=False, y_offset: float=0):
+    def make_patches(self, ax: plt.Axes, linear: bool = False, y_offset: float = 0):
         min_x, min_y, max_x, max_y = np.inf, np.inf, -np.inf, -np.inf
-        for (ss, start_i, end_i) in self.ss_elements:
+        for ss, start_i, end_i in self.ss_elements:
             if ss == "H":
                 ss = "HC" if self.helix_config.as_cylinder else "HW"
             if linear:
@@ -71,15 +97,24 @@ class SecondaryStructure:
             min_x, min_y, max_x, max_y = image_utils.update_limits(
                 start_x, start_y, end_x, end_y, min_x, min_y, max_x, max_y
             )
-            for patch in make_patch(ss, start_x, start_y, end_x, end_y, ax, 
-                                    self.helix_config, self.sheet_config, self.turn_config):
+            for patch in make_patch(
+                ss,
+                start_x,
+                start_y,
+                end_x,
+                end_y,
+                ax,
+                self.helix_config,
+                self.sheet_config,
+                self.turn_config,
+            ):
                 ax.add_patch(patch)
         ax.set_xlim(min_x - 1, max_x + 1)
         ax.set_ylim(min_y - 1, max_y + 1)
         for direction in ["left", "right", "top", "bottom"]:
             ax.spines[direction].set_visible(False)
         return ax
-    
+
     def run_dssp(self, overwrite=False):
         dssp_pdb_file = f"{self.protein_config.output_prefix}_dssp.pdb"
         if overwrite or not Path(dssp_pdb_file).exists():
@@ -95,10 +130,12 @@ class SecondaryStructure:
         dssp_file = f"{self.protein_config.output_prefix}_dssp.dssp"
         if overwrite or not Path(dssp_file).exists():
             with open(dssp_file, "w") as f:
-                subprocess.check_call(["mkdssp", dssp_pdb_file, "--output-format", "dssp"], stdout=f)
+                subprocess.check_call(
+                    ["mkdssp", dssp_pdb_file, "--output-format", "dssp"], stdout=f
+                )
         structure = pd.parseDSSP(str(dssp_file), structure)
         return structure
-    
+
     def get_coords_and_ss_elements(self, structure: pd.AtomGroup):
         structure_alpha = structure.select("calpha")
         coords = structure_alpha.getCoords()
@@ -266,7 +303,3 @@ def get_ss_elements(ss_list):
             prev_i = i
     ss_blocks.append((SS_DICT.get(ss_list[-1], "T"), prev_i, len(ss_list) - 1))
     return ss_blocks
-
-
-
-
