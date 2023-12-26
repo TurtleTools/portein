@@ -1,13 +1,14 @@
+from pathlib import Path
+import subprocess
 import matplotlib.pyplot as plt
 import numpy as np
 import prody as pd
 from matplotlib import patches as m_patches
 from matplotlib import transforms as m_transforms
 import typing as ty
-from pathlib import Path
-
-from portein.config import HelixConfig, TurnConfig, SheetConfig, PorteinConfig
-from portein.rotate import get_best_transformation, apply_transformation
+from dataclasses import dataclass
+from portein import config
+from portein.plot import image_utils
 
 SS_DICT = {
     "H": "H",
@@ -21,71 +22,92 @@ SS_DICT = {
 }
 
 
-def plot_portrait(
-        pdb: ty.Union[str, Path, pd.AtomGroup],
-        config: PorteinConfig = None,
-        height=12,
-        width=None,
-        ax=None,
-):
-    """
-    Plot 2D portrait of a protein
+@dataclass
+class SecondaryStructure:
+    protein_config: config.ProteinConfig
+    helix_config: config.HelixConfig
+    sheet_config: config.SheetConfig
+    turn_config: config.TurnConfig
+    coords: ty.Optional[np.ndarray] = None
+    ss_elements: ty.Optional[ty.List[ty.Tuple[str, int, int]]] = None
 
-    Parameters
-    ----------
-    pdb
-        Can be a PDB ID, a PDB file, or a prody AtomGroup object
-    config
-        PorteinConfig object
-    height
-        figure height (auto-calculated from width if set to None)
-    width
-        figure width (auto-calculated from height if set to None)
-    ax
-        matplotlib ax to use, if None, makes new figure with specified height and width
-    Returns
-    -------
-    matplotlib Figure, matplotlib Axes, 2D points corresponding to each residue
-    """
-    if config is None:
-        config = PorteinConfig.default()
-    if type(pdb) == str or type(pdb) == Path:
-        structure = pd.parsePDB(pdb)
-    else:
-        structure = pdb
-    dssp_file = pd.execDSSP(pdb)
-    structure = pd.parseDSSP(dssp_file, structure)
-    structure_alpha = structure.select("calpha")
-    coords = structure_alpha.getCoords()
-    matrix = get_best_transformation(coords)
-    coords = apply_transformation(coords, matrix)[:, :2]
-    ss_list = structure_alpha.getSecstrs()
-    ss_elements = get_ss_elements(ss_list)
-    if ax is None:
-        fig, ax = plt.subplots(1, figsize=find_size(coords, height, width))
-    ax.axis("off")
-    min_x, min_y, max_x, max_y = np.inf, np.inf, -np.inf, -np.inf
-    for (ss, start_i, end_i) in ss_elements:
-        if ss == "H":
-            if config.helix.as_cylinder:
-                ss = "HC"
+
+    def run(self, ax=None, linear=False, y_offset=0, overwrite=False):
+        """
+        Plot 2D portrait of a protein
+
+        Parameters
+        ----------
+        ax
+            matplotlib ax to use, if None, makes new figure with specified height and width
+        linear
+            If True, draws all secondary structure elements in a single line instead of using protein coordinates
+        y_offset
+            If linear is True, y coordinate of the line to draw secondary structure elements on
+        Returns
+        -------
+        matplotlib Axes
+        """
+        structure = self.run_dssp(overwrite=overwrite)
+        self.coords, self.ss_elements = self.get_coords_and_ss_elements(structure)
+        if ax is None:
+            fig, ax = plt.subplots(1, figsize=(self.protein_config.width, self.protein_config.height))
+        ax.axis("off")
+        return self.make_patches(ax, linear, y_offset)
+
+    def make_patches(self,
+                     ax: plt.Axes, 
+                     linear: bool=False, y_offset: float=0):
+        min_x, min_y, max_x, max_y = np.inf, np.inf, -np.inf, -np.inf
+        for (ss, start_i, end_i) in self.ss_elements:
+            if ss == "H":
+                ss = "HC" if self.helix_config.as_cylinder else "HW"
+            if linear:
+                start_x, start_y = start_i, y_offset
+                end_x, end_y = end_i, y_offset
             else:
-                ss = "HW"
-        start_x, start_y = coords[start_i, 0], coords[start_i, 1]
-        end_x, end_y = coords[end_i, 0], coords[end_i, 1]
-        min_x, min_y, max_x, max_y = update_limits(
-            start_x, start_y, end_x, end_y, min_x, min_y, max_x, max_y
-        )
-        for patch in make_patch(ss, start_x, start_y, end_x, end_y, ax, config):
-            ax.add_patch(patch)
-    ax.set_xlim(min_x - 1, max_x + 1)
-    ax.set_ylim(min_y - 1, max_y + 1)
-    for direction in ["left", "right", "top", "bottom"]:
-        ax.spines[direction].set_visible(False)
-    return ax, coords
+                start_x, start_y = self.coords[start_i, 0], self.coords[start_i, 1]
+                end_x, end_y = self.coords[end_i, 0], self.coords[end_i, 1]
+            min_x, min_y, max_x, max_y = image_utils.update_limits(
+                start_x, start_y, end_x, end_y, min_x, min_y, max_x, max_y
+            )
+            for patch in make_patch(ss, start_x, start_y, end_x, end_y, ax, 
+                                    self.helix_config, self.sheet_config, self.turn_config):
+                ax.add_patch(patch)
+        ax.set_xlim(min_x - 1, max_x + 1)
+        ax.set_ylim(min_y - 1, max_y + 1)
+        for direction in ["left", "right", "top", "bottom"]:
+            ax.spines[direction].set_visible(False)
+        return ax
+    
+    def run_dssp(self, overwrite=False):
+        dssp_pdb_file = f"{self.protein_config.output_prefix}_dssp.pdb"
+        if overwrite or not Path(dssp_pdb_file).exists():
+            with open(self.protein_config.pdb_file, "r") as f:
+                with open(dssp_pdb_file, "w") as f2:
+                    f2.write("HEADER\n")
+                    for i, line in enumerate(f):
+                        if line.startswith("REMARK"):
+                            continue
+                        f2.write(line)
+
+        structure = pd.parsePDB(str(dssp_pdb_file))
+        dssp_file = f"{self.protein_config.output_prefix}_dssp.dssp"
+        if overwrite or not Path(dssp_file).exists():
+            with open(dssp_file, "w") as f:
+                subprocess.check_call(["mkdssp", dssp_pdb_file, "--output-format", "dssp"], stdout=f)
+        structure = pd.parseDSSP(str(dssp_file), structure)
+        return structure
+    
+    def get_coords_and_ss_elements(self, structure: pd.AtomGroup):
+        structure_alpha = structure.select("calpha")
+        coords = structure_alpha.getCoords()
+        ss_list = structure_alpha.getSecstrs()
+        ss_elements = get_ss_elements(ss_list)
+        return coords, ss_elements
 
 
-def make_helix_wave(config: HelixConfig, length):
+def make_helix_wave(config: config.HelixConfig, length):
     patches = []
     start_theta, end_theta = 0, 180
     for arc_start in np.arange(0, length, config.wave_arc_length):
@@ -108,12 +130,11 @@ def make_helix_wave(config: HelixConfig, length):
     return patches
 
 
-def make_helix_cylinder(config: HelixConfig, length):
-    patches = []
+def make_helix_cylinder(config: config.HelixConfig, length):
     # Origin is *center* of ellipse
     origin = (config.cylinder_ellipse_length / 2, 0)
     # First ellipse
-    patches.append(
+    patches = [
         m_patches.Ellipse(
             origin,
             config.cylinder_ellipse_length,
@@ -123,7 +144,7 @@ def make_helix_cylinder(config: HelixConfig, length):
             facecolor=config.color,
             alpha=config.opacity,
         )
-    )
+    ]
 
     # Rectangle(s)
     origin = (
@@ -158,7 +179,7 @@ def make_helix_cylinder(config: HelixConfig, length):
     return patches
 
 
-def make_sheet(config: SheetConfig, length):
+def make_sheet(config: config.SheetConfig, length):
     return [
         m_patches.FancyArrow(
             0,
@@ -177,7 +198,7 @@ def make_sheet(config: SheetConfig, length):
     ]
 
 
-def make_turn(config: TurnConfig, length):
+def make_turn(config: config.TurnConfig, length):
     origin = (length / 2, config.height / 2)
     return [
         m_patches.Circle(
@@ -216,18 +237,18 @@ def rotate_patch(patch, start_x, start_y, end_x, end_y, ax):
     return patch
 
 
-def make_patch(name, sx, sy, ex, ey, ax, config: PorteinConfig):
+def make_patch(name, sx, sy, ex, ey, ax, helix_config, sheet_config, turn_config):
     length = np.sqrt((ex - sx) ** 2 + (ey - sy) ** 2)
     if name == "HC":
-        patches = make_helix_cylinder(config.helix, length)
+        patches = make_helix_cylinder(helix_config, length)
     elif name == "HW":
-        patches = make_helix_wave(config.helix, length)
+        patches = make_helix_wave(helix_config, length)
     elif name == "E":
-        patches = make_sheet(config.sheet, length)
+        patches = make_sheet(sheet_config, length)
     elif name == "T":
-        patches = make_turn(config.turn, length)
+        patches = make_turn(turn_config, length)
     else:
-        raise ValueError("name must be one of HC, HW, E, T")
+        raise ValueError("secondary structure element name must be one of HC, HW, E, T")
     return [rotate_patch(patch, sx, sy, ex, ey, ax) for patch in patches]
 
 
@@ -247,41 +268,5 @@ def get_ss_elements(ss_list):
     return ss_blocks
 
 
-def update_limits(sx, sy, ex, ey, min_x, min_y, max_x, max_y):
-    min_x = min(sx, min_x)
-    min_x = min(ex, min_x)
-    max_x = max(sx, max_x)
-    max_x = max(ex, max_x)
-    min_y = min(sy, min_y)
-    min_y = min(ey, min_y)
-    max_y = max(sy, max_y)
-    max_y = max(ey, max_y)
-    return min_x, min_y, max_x, max_y
 
 
-def find_size(points, height: ty.Optional[float], width: ty.Optional[float]):
-    """
-    Find figure size given coordinates and size of one dimension.
-    Calculates height from width if height=None and width from height if width=None
-
-    Parameters
-    ----------
-    points
-    height
-    width
-
-    Returns
-    -------
-    (width, height)
-    """
-    assert (
-            width is not None or height is not None
-    ), "Either one of height or width must be set"
-    if height is not None and width is not None:
-        return width, height
-    min_x, max_x = np.min(points[:, 0]), np.max(points[:, 0])
-    min_y, max_y = np.min(points[:, 1]), np.max(points[:, 1])
-    if height is None:
-        return width, (max_y - min_y) * width / (max_x - min_x)
-    else:
-        return (max_x - min_x) * height / (max_y - min_y), height

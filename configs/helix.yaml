@@ -1,0 +1,11 @@
+as_cylinder: false
+color: lightsteelblue
+cylinder_ellipse_height: 0.999
+cylinder_ellipse_length: 0.5
+cylinder_rectangle_height: 1.0
+opacity: 1.0
+outline_color: '#5c6887'
+outline_width: 3.0
+wave_arc_height: 1.0
+wave_arc_length: 0.5
+wave_arc_width: 3.0

@@ -1,159 +1,220 @@
+```python
+%load_ext autoreload
+%autoreload 2
+```
+
 # Portein
 ## Portraits of Proteins
 
-2D representations of 3D protein structures.
+Portein plots 3D proteins according to their best 2D projection (best = greatest area visible), allowing for easy automation of protein visualization.
 
-Portein plots secondary structural elements according to the best 2D projection of the input 3D structure. 
-(best = greatest area visible)
-
-e.g.
-
-```python
-from portein import plot_portrait
-plot_portrait("7lc2")
-```
-
-or run from the command line
-```shell
-portein 7lc2 7lc2.png
-```
-
-![example](images/7lc2.png)
-
-## Installation
-```shell
-conda install -c salilab dssp
-pip install git+https://github.com/TurtleTools/portein.git
-```
-
-## How it works
-
-1. Use some linear algebra (from [1](#2dprojection) and [2](#obb)), 
-   to find the best 2D projection for the input protein's 3D coordinates. 
-2. Run DSSP to split the protein into its secondary structural elements (SSE)
-3. Use the start and end coordinates of each SSE to plot (adapted from [3](#sseplot1))
-    * helices as waves or cylinders (controlled by `HelixConfig.as_cylinder`)
-    * beta sheets as arrows
-    * turns as arcs with circles at the ends
-    
-
-## Customization
-### Configuration
-
-Use the `PorteinConfig` object to modify plotting colors, line widths etc.
-```python
-from portein import plot_portrait, PorteinConfig
-config = PorteinConfig.default()
-config.helix.as_cylinder = True # Plot helices as cylinders
-config.sheet.color = "red"
-config.sheet.opacity = 0.5
-plot_portrait("7lc2", config, height=12)
-```
-![custom config](images/7lc2_custom_config.png)
-
-Available options and defaults:
-
-```python
-PorteinConfig(
-    helix=HelixConfig(
-        as_cylinder=False,
-        cylinder_ellipse_length=0.5,
-        cylinder_ellipse_height=0.999,
-        cylinder_rectangle_height=1.0,
-        wave_arc_width=3.0,
-        wave_arc_height=1.0,
-        wave_arc_length=0.5,
-        outline_width=2,
-        outline_color='#5c6887',
-        color='lightsteelblue',
-        opacity=1.0
-    ),
-    sheet=SheetConfig(
-        thickness_factor=1,
-        tail_height=1.0,
-        head_height=2.0,
-        outline_width=2,
-        outline_color='#5c6887',
-        color='#999FD0',
-        opacity=1.0
-    ),
-    turn=TurnConfig(
-        thickness_factor=0.5,
-        height=0.5,
-        circle_radius=0.2,
-        circle_color='#d1d6e3',
-        arc_width=2,
-        arc_color='#d1d6e3',
-        opacity=0.8
-    )
-)
-```
-
-### Plotting
-- Use the returned points array to highlight specific residues.
-```python
-from portein import plot_portrait
-ax, points = plot_portrait("7lc2")
-highlight_residues = [1, 5, 19, 40, 250]
-ax.scatter(points[highlight_residues, 0], 
-           points[highlight_residues, 1],
-           color="red", s=100, 
-           edgecolor="black", linewidth=2)
-```
-![highlight points](images/7lc2_highlight.png)
-
-
-- Use the returned ax object to modify the figure
-```python
-from portein import plot_portrait
-ax, points = plot_portrait("7lc2")
-ax.set_title("Portrait of PDB ID: 7lc2", fontsize=20)
-```
-![modify ax](images/modify_ax.png)
-
-
-- Use the ax parameter for subplots.
-```python
-from portein import plot_portrait, PorteinConfig
-import matplotlib.pyplot as plt
-fig, axes = plt.subplots(1, 3, figsize=(18, 8))
-config = PorteinConfig.default(outline_width=2)
-for ax, pdb_id in zip(axes.ravel(), ["7lc2", "5eat", "7cmb"]):
-    plot_portrait(pdb_id, config, ax=ax)
-    ax.set_title(pdb_id)
-```
-![multiple](images/multiple.png)
-
-### Transformation
-
-If you don't want the SSE representation and just want to find the most flattering angle for your protein, 
-use the transformation matrix directly.
 
 ```python
 import prody as pd
-from portein import get_best_transformation, apply_transformation, find_size
+import portein
 import matplotlib.pyplot as plt
-
-pdb = pd.parsePDB("7lc2")
-coords = pdb.select("protein and calpha").getCoords()
-matrix = get_best_transformation(coords)
-
-# Rotate the whole protein
-pdb = pd.applyTransformation(pd.Transformation(matrix), pdb)
-
-# Or rotate the coords for plotting
-coords = apply_transformation(coords, matrix)
-plt.figure(figsize=find_size(coords, height=12, width=None))
-plt.plot(coords[:, 0], coords[:, 1])
-plt.axis("off")
+import numpy as np
+import yaml
+import warnings
+warnings.filterwarnings('ignore')
+portein.compile_numba_functions()
 ```
 
-![7lc2_raw](images/7lc2_raw.png)
+## Orient your protein
 
----
+Portein uses some linear algebra (for [Optimal rotation of 3D model for 2D projection](https://stackoverflow.com/a/2970340) and [Rotating an object to maximize bounding box height](https://stackoverflow.com/a/47844156)) to find the best 2D projection for the input protein's 3D coordinates. 
 
-<a name="2dprojection">1</a>: https://stackoverflow.com/a/2970340 - Optimal rotation of 3D model for 2D projection
+**Example orientation:**
 
-<a name="obb">2</a>: https://stackoverflow.com/a/47844156 - Rotating an object to maximize bounding box height
 
-<a name="sseplot1">3</a>: https://gist.github.com/JoaoRodrigues/f9906b343d3acb38e39f2b982b02ecb0 - Protein secondary structure diagrams
+```python
+pdb = pd.parsePDB("7lc2")
+old_coords = pdb.select("protein and calpha").getCoords()
+
+# Rotate the protein
+pdb_oriented = portein.rotate_protein(pdb)
+pd.writePDB("images/7lc2_rotated.pdb", pdb_oriented)
+new_coords = pdb_oriented.select("protein and calpha").getCoords()
+
+# Find the best size of the plot based on the coordinates and a given height (or width)
+old_width, old_height = portein.find_size(old_coords, height=5)
+new_width, new_height = portein.find_size(new_coords, height=5)
+
+fig, ax = plt.subplots(1, 2, figsize=(old_width + new_width, new_height), gridspec_kw={"width_ratios": [old_width, new_width]})
+ax[0].plot(old_coords[:, 0], old_coords[:, 1], "-", c="black")
+ax[0].scatter(old_coords[:, 0], old_coords[:, 1], c=np.arange(old_coords.shape[0]), s=50, cmap="Blues", edgecolors="gray")
+ax[1].plot(new_coords[:, 0], new_coords[:, 1], "-", c="black")
+ax[1].scatter(new_coords[:, 0], new_coords[:, 1], c=np.arange(new_coords.shape[0]), s=50, cmap="Blues", edgecolors="gray")
+ax[0].set_title("Before rotation", fontsize=20)
+ax[1].set_title("After rotation", fontsize=20)
+ax[0].axis("off")
+ax[1].axis("off")
+plt.tight_layout()
+```
+    
+![png](images/README_files/images/README_6_0.png)
+    
+
+
+## Plot Pymol ray-traced images
+
+Requires: [pymol](https://github.com/schrodinger/pymol-open-source)
+
+Automatically layer different Pymol representations on top of each other, each one ray-traced separately and then combined with user-defined transparencies. All variables that can be set in Pymol can be passed to the `PymolConfig` object.
+
+
+```python
+# Using some default nice PyMOL settings
+with open("configs/pymol_settings.yaml") as f:
+    pymol_settings = yaml.safe_load(f)
+pymol_settings
+```
+
+    {'ambient': 0.5,
+     'antialias': 2,
+     'cartoon_discrete_colors': True,
+     'cartoon_fancy_helices': True,
+     'cartoon_sampling': 20,
+     'depth_cue': False,
+     'hash_max': 300,
+     'light_count': 1,
+     'ray_opaque_background': False,
+     'ray_shadows': False,
+     'ray_texture': 0,
+     'ray_trace_disco_factor': 1,
+     'ray_trace_fog': False,
+     'ray_trace_gain': 0,
+     'ray_trace_mode': 1,
+     'specular': False,
+     'surface_quality': 2}
+
+
+
+
+```python
+# Rotate the protein, set the width of the plot (height is auto-calculated), and the colormap for the chains (can also be a dictionary of chain: color)
+protein_config = portein.ProteinConfig(pdb_file="7lc2", rotate=True, width=1000, chain_colormap="Set3", output_prefix="images/7lc2")
+
+# Single layer of cartoon representation
+pymol_config = portein.PymolConfig(layers=[portein.PymolRepresentationConfig(representation="cartoon",
+                                                                             pymol_settings=pymol_settings)])
+
+# Run PyMOL
+pymol_class = portein.Pymol(protein_config=protein_config, pymol_config=pymol_config)
+image_file = pymol_class.run()
+```
+
+     Ray: render time: 6.57 sec. = 548.2 frames/hour (13.15 sec. accum.).
+
+
+![Simple Pymol example](images/7lc2_rotated_pymol.png)
+
+Here's a fancier version with three layers:
+- Layer 1 is surface at 0.5 opacity
+- Layer 2 is cartoon
+- Layer 3 has only some residues displayed as sticks, set by the `selection="highlight"` in `PymolRepresentationConfig` and `highlight_residues` in `ProteinConfig`. 
+
+The `selection` attribute can also be any kind of Pymol selection ("all" by default)
+
+
+```python
+
+protein_config = portein.ProteinConfig(pdb_file="7lc2", rotate=True, output_prefix="images/7lc2_fancy",
+                                       chain_colormap="Set3", 
+                                       highlight_residues={"A": {"black": [30, 35], "red": list(range(10,20))},
+                                                           "B": {"black": [25], "red": list(range(10, 16))}},
+                                       width=1000)
+pymol_config = portein.PymolConfig(layers=[portein.PymolRepresentationConfig(representation="surface",
+                                                                             pymol_settings=pymol_settings,
+                                                                             transparency=0.5),
+                                            portein.PymolRepresentationConfig(representation="cartoon",
+                                                                                pymol_settings=pymol_settings),
+                                            portein.PymolRepresentationConfig(representation="sticks",
+                                                                                pymol_settings=pymol_settings,
+                                                                                selection="highlight"),
+                                                                        ],
+                                    buffer=10)
+pymol_class = portein.Pymol(protein_config=protein_config, pymol_config=pymol_config)
+image_file = pymol_class.run()
+```
+
+     Ray: render time: 20.15 sec. = 178.6 frames/hour (90.87 sec. accum.).
+     Ray: render time: 5.29 sec. = 680.7 frames/hour (102.32 sec. accum.).
+     Ray: render time: 0.45 sec. = 8005.3 frames/hour (103.23 sec. accum.).
+
+
+![Fancy Pymol example](images/7lc2_fancy_rotated_pymol.png)
+
+## Plot `illustrate` images
+
+Requires: [`illustrate`](https://github.com/ccsb-scripps/Illustrate), [`convert`](https://imagemagick.org/script/convert.php)
+
+Uses David Goodsell's [`illustrate`](https://github.com/ccsb-scripps/Illustrate) to generate images. All `illustrate` parameters are user-definable.
+
+
+```python
+protein_config = portein.ProteinConfig(pdb_file="7lc2", rotate=True, output_prefix="images/7lc2",
+                                       chain_colormap="Set3", 
+                                       highlight_residues={"A": {"black": [30, 35], "red": list(range(10,20))},
+                                                           "B": {"black": [25], "red": list(range(10, 16))}},
+                                       width=1000)
+
+illustrate = portein.Illustrate(protein_config=protein_config, illustrate_config=portein.IllustrateConfig())
+image_file = illustrate.run()
+```
+
+![Illustrate example](images/7lc2_rotated_illustrate.png)
+
+## Plot secondary structure topology diagram
+
+Requires: `mkdssp`
+
+This runs DSSP to split the protein into its secondary structural elements (SSE) and then uses the start and end coordinates of each SSE to plot (adapted from [this gist](https://gist.github.com/JoaoRodrigues/f9906b343d3acb38e39f2b982b02ecb0))
+* helices as waves or cylinders (controlled by `HelixConfig.as_cylinder`)
+* beta sheets as arrows
+* turns as arcs with circles at the ends
+
+See the `configs` folder for parameter settings available for each plot type.
+
+
+```python
+protein_config = portein.ProteinConfig(pdb_file="7lc2", rotate=True, height=10, output_prefix="images/7lc2")
+ss = portein.SecondaryStructure(protein_config=protein_config, 
+                                helix_config=portein.HelixConfig(), 
+                                sheet_config=portein.SheetConfig(), 
+                                turn_config=portein.TurnConfig())
+ss.run()
+```
+    
+![png](images/README_files/images/README_19_1.png)
+    
+
+
+Modify the figure e.g to highlight specific residues using the returned Axes object:
+
+
+```python
+ax = ss.run()
+ax.set_title("Portrait of PDB ID: 7lc2", fontsize=20)
+highlight_residues = [30, 35, 25, 10, 11, 12, 13, 14, 15]
+ax.scatter(ss.coords[highlight_residues, 0], 
+           ss.coords[highlight_residues, 1],
+           color="red", s=100, 
+           edgecolor="black", linewidth=2)
+```
+    
+![png](images/README_files/images/README_21_1.png)
+    
+
+
+Plot as a linear secondary structure diagram:
+
+
+```python
+fig, ax = plt.subplots(1, figsize=(50, 1))
+ss.run(ax=ax, linear=True)
+```
+    
+![png](images/README_files/images/README_23_1.png)
+    
+

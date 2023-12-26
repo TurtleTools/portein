@@ -19,12 +19,12 @@ def get_best_transformation(coords: ty.Union[pd.AtomGroup, np.ndarray, str, Path
     -------
     4x4 transformation matrix
     """
-    if type(coords) == str or type(coords) == Path:
+    if type(coords) in [str, Path]:
         coords = pd.parsePDB(coords).select("protein and calpha").getCoords()
     elif type(coords) == pd.AtomGroup:
         coords = coords.getCoords()
     matrix = np.eye(4)
-    for i in range(20):
+    for _ in range(20):
         m = find_best_projection(coords)
         if np.allclose(m, np.eye(4)):
             break
@@ -150,3 +150,10 @@ def rotate_to_maximize_bb_height(points):
 def compile_numba_functions():
     # Compile numba functions
     get_best_transformation(np.random.random((10, 3)))
+
+
+def rotate_protein(pdb: pd.AtomGroup):
+    coords = pdb.select("protein and calpha").getCoords()
+    matrix = get_best_transformation(coords)
+    pdb = pd.applyTransformation(pd.Transformation(matrix), pdb)
+    return pdb
