@@ -1,3 +1,5 @@
+from pathlib import Path
+import subprocess
 import matplotlib.pyplot as plt
 import numpy as np
 import prody as pd
@@ -23,7 +25,6 @@ SS_DICT = {
 @dataclass
 class SecondaryStructure:
     protein_config: config.ProteinConfig
-    pdb_file: str
     helix_config: config.HelixConfig
     sheet_config: config.SheetConfig
     turn_config: config.TurnConfig
@@ -31,7 +32,7 @@ class SecondaryStructure:
     ss_elements: ty.Optional[ty.List[ty.Tuple[str, int, int]]] = None
 
 
-    def run(self, ax=None, linear=False, y_offset=0):
+    def run(self, ax=None, linear=False, y_offset=0, overwrite=False):
         """
         Plot 2D portrait of a protein
 
@@ -47,10 +48,10 @@ class SecondaryStructure:
         -------
         matplotlib Axes
         """
-        structure = self.run_dssp()
+        structure = self.run_dssp(overwrite=overwrite)
         self.coords, self.ss_elements = self.get_coords_and_ss_elements(structure)
         if ax is None:
-            fig, ax = plt.subplots(1, figsize=(self.protein_config.height, self.protein_config.width))
+            fig, ax = plt.subplots(1, figsize=(self.protein_config.width, self.protein_config.height))
         ax.axis("off")
         return self.make_patches(ax, linear, y_offset)
 
@@ -79,10 +80,23 @@ class SecondaryStructure:
             ax.spines[direction].set_visible(False)
         return ax
     
-    def run_dssp(self):
-        structure = pd.parsePDB(str(self.pdb_file))
-        dssp_file = pd.execDSSP(str(self.pdb_file))
-        structure = pd.parseDSSP(dssp_file, structure)
+    def run_dssp(self, overwrite=False):
+        dssp_pdb_file = f"{self.protein_config.output_prefix}_dssp.pdb"
+        if overwrite or not Path(dssp_pdb_file).exists():
+            with open(self.protein_config.pdb_file, "r") as f:
+                with open(dssp_pdb_file, "w") as f2:
+                    f2.write("HEADER\n")
+                    for i, line in enumerate(f):
+                        if line.startswith("REMARK"):
+                            continue
+                        f2.write(line)
+
+        structure = pd.parsePDB(str(dssp_pdb_file))
+        dssp_file = f"{self.protein_config.output_prefix}_dssp.dssp"
+        if overwrite or not Path(dssp_file).exists():
+            with open(dssp_file, "w") as f:
+                subprocess.check_call(["mkdssp", dssp_pdb_file, "--output-format", "dssp"], stdout=f)
+        structure = pd.parseDSSP(str(dssp_file), structure)
         return structure
     
     def get_coords_and_ss_elements(self, structure: pd.AtomGroup):

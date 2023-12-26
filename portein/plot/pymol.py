@@ -4,7 +4,11 @@ from dataclasses import dataclass
 from PIL import Image
 from portein import config
 from portein.plot import image_utils
-from pymol import cmd, util
+try:
+    from pymol import cmd, util
+except ImportError:
+    print("Warning: pymol not installed, cannot use Pymol class")
+    pass
 
 @dataclass
 class Pymol:
@@ -16,8 +20,9 @@ class Pymol:
         cmd.load(self.protein_config.pdb_file)
         self.set_pymol_settings()
         self.draw_representations()
-        self.layer_images(remove_intermediate_files)
+        image_file = self.layer_images(remove_intermediate_files)
         cmd.reinitialize()
+        return image_file
 
     def set_pymol_settings(self):
         cmd.bg_color("white")
@@ -59,7 +64,8 @@ class Pymol:
                          selection=representation_config.selection,
                          palette=representation_config.color)
         elif representation_config.color is not None:
-            cmd.color(representation_config.color, representation_config.selection)
+            cmd.color(f"0x{m_colors.to_hex(representation_config.color).lower()[1:]}", 
+                      representation_config.selection)
         if representation_config.representation == "sticks":
             util.cnc("rep sticks")
 
@@ -85,4 +91,6 @@ class Pymol:
         image = Image.new("RGBA", pngs[0].size)
         for png in pngs:
             image = Image.alpha_composite(image, png)
-        image.save(f"{self.protein_config.output_prefix}_pymol.png") 
+        image_file = f"{self.protein_config.output_prefix}_pymol.png"
+        image.save(image_file) 
+        return image_file

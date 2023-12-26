@@ -82,7 +82,9 @@ calculate
         subprocess.check_call([self.illustrate_config.convert_binary, f"{self.protein_config.output_prefix}_illustrate.pnm", f"{self.protein_config.output_prefix}_illustrate.png"])
         img = Image.open(f"{self.protein_config.output_prefix}_illustrate.png")
         img = img.rotate(90, expand=True)
-        img.save(f"{self.protein_config.output_prefix}_illustrate.png")
+        image_file = f"{self.protein_config.output_prefix}_illustrate.png"
+        img.save(image_file)
         if remove_intermediate_files:
             Path(f"{self.protein_config.output_prefix}_illustrate.inp").unlink()
             Path(f"{self.protein_config.output_prefix}_illustrate.pnm").unlink()
+        return image_file

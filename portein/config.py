@@ -132,7 +132,7 @@ class TurnConfig:
 class ProteinConfig:
     pdb_file: str
     """PDB file to read"""
-    rotate: bool = True
+    rotate: bool = False
     """rotate the protein to have the best orientation"""
     output_prefix: str = None
     """prefix for output files. If None uses the PDB file name"""
@@ -160,8 +160,8 @@ class ProteinConfig:
         if self.rotate:
             self.save_rotated()
         self.width, self.height = image_utils.find_size(self.pdb.getCoords(), 
-                                                        self.width, 
-                                                        self.height)
+                                                        width=self.width, 
+                                                        height=self.height)
         if self.highlight_residues is None:
             self.highlight_residues = {}
         if self.chain_to_color is None:

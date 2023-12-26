@@ -24,7 +24,7 @@ def alpha_blending(color, alpha: float):
     return tuple( (1. -  alpha) + np.array(color)*alpha )
 
 
-def find_size(points, height: ty.Optional[float] = None, width: ty.Optional[float] = None):
+def find_size(points, width: ty.Optional[float] = None, height: ty.Optional[float] = None):
     """
     Find figure size given coordinates and size of one dimension.
     Calculates height from width if height=None and width from height if width=None
@@ -32,8 +32,8 @@ def find_size(points, height: ty.Optional[float] = None, width: ty.Optional[floa
     Parameters
     ----------
     points
-    height
     width
+    height
 
     Returns
     -------
