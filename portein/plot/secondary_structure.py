@@ -142,6 +142,10 @@ class SecondaryStructure:
         ss_list = structure_alpha.getSecstrs()
         ss_elements = get_ss_elements(ss_list)
         return coords, ss_elements
+    
+    def cleanup(self):
+        Path(f"{self.protein_config.output_prefix}_dssp.pdb").unlink()
+        Path(f"{self.protein_config.output_prefix}_dssp.dssp").unlink()
 
 
 def make_helix_wave(config: config.HelixConfig, length):
