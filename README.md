@@ -211,7 +211,7 @@ ss.run()
 And from the command line:
 
 ```sh
-portein secondary examples/protein_example.yaml --dpi=100
+portein secondary 7lc2
 ```
 Use `-h`, `-s` and `-t` to pass helix, turn, and sheet config files
 

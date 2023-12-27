@@ -89,11 +89,39 @@ def rotate(
 @app.command()
 def secondary(
     protein: Annotated[
-        Path,
+        str,
         typer.Argument(
-            ..., help="Path to protein config file", exists=True, show_default=False
+            ..., help="PDB ID or path to PDB file", exists=True, show_default=False
         ),
     ],
+    norotate: Annotated[
+        bool,
+        typer.Option(
+            "--norotate",
+            "-n",
+            help="Do not re-orient the protein",
+        ),
+    ] = False,
+    output_prefix: Annotated[
+        str,
+        typer.Option(
+            "--output-prefix, -o",
+            help="Prefix of output file (default: same as input file)",
+            show_default=False,
+        ),
+    ] = None,
+    width: Annotated[
+        int,
+        typer.Option(
+            help="Width of image in pixels",
+        ),
+    ] = 3000,
+    height: Annotated[
+        int,
+        typer.Option(
+            help="Height of image in pixels",
+        ),
+    ] = None,
     helix: Annotated[
         Optional[Path],
         typer.Option(
@@ -113,14 +141,27 @@ def secondary(
         ),
     ] = None,
     dpi: Annotated[int, typer.Option(help="DPI of image")] = 300,
+    keep_files: Annotated[
+        bool,
+        typer.Option(
+            help="Keep intermediate DSSP files",
+        ),
+    ] = False,
 ):
     """
     Plot secondary structure topology diagram
     """
-    ss = portein.SecondaryStructure.from_yaml(protein, helix, sheet, turn, dpi=dpi)
+    protein = portein.ProteinConfig(protein, rotate=not norotate, output_prefix=output_prefix, width=width, height=height)
+    ss = portein.SecondaryStructure(protein, 
+                                    portein.HelixConfig.from_yaml(helix),
+                                    portein.SheetConfig.from_yaml(sheet),
+                                    portein.TurnConfig.from_yaml(turn),
+                                    dpi=dpi)
     ss.run()
     image_file = f"{ss.protein_config.output_prefix}_secondary_structure.png"
     plt.savefig(image_file, dpi=dpi, bbox_inches="tight")
+    if not keep_files:
+        ss.cleanup()
     print(f"Saved image to {image_file}")
 
 
