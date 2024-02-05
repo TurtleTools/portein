@@ -53,8 +53,10 @@ class Pymol:
         cmd.set("max_threads", 8)
         if self.center_to is not None:
             cmd.center(self.center_to)
-        if self.zoom_to is not None or self.buffer is not None:
+        if self.zoom_to is not None:
             cmd.zoom(self.zoom_to, buffer=self.buffer)
+        elif self.buffer is not None:
+            cmd.zoom(buffer=self.buffer)
         for chain, color in self.protein.chain_to_color.items():
             cmd.color(f"0x{m_colors.to_hex(color).lower()[1:]}", f"chain {chain}")
 
