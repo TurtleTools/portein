@@ -21,6 +21,10 @@ class Pymol:
     """order of representations, selections, and transparencies to layer on top of each other"""
     buffer: float = None
     """buffer around the molecule in Angstroms"""
+    zoom_to: str = None
+    """zoom to selection"""
+    center_to: str = None
+    """center to selection"""
 
     def from_yaml(protein_config: Path, pymol_config: Path, buffer: float = None):
         protein = config.ProteinConfig.from_yaml(protein_config)
@@ -47,8 +51,10 @@ class Pymol:
         cmd.bg_color("white")
         cmd.remove("solvent")
         cmd.set("max_threads", 8)
-        if self.buffer is not None:
-            cmd.zoom(buffer=self.buffer)
+        if self.center_to is not None:
+            cmd.center(self.center_to)
+        if self.zoom_to is not None or self.buffer is not None:
+            cmd.zoom(self.zoom_to, buffer=self.buffer)
         for chain, color in self.protein.chain_to_color.items():
             cmd.color(f"0x{m_colors.to_hex(color).lower()[1:]}", f"chain {chain}")
 
