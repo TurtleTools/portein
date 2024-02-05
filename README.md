@@ -46,9 +46,13 @@ ax[0].axis("off")
 ax[1].axis("off")
 plt.tight_layout()
 ```
+
+
     
-![png](examples/README_files/images/README_6_0.png)
+![png](examples/README_files/examples/README_6_0.png)
     
+
+
 You can save an oriented version of your protein from the command line as follows:
 
 ```sh
@@ -101,7 +105,7 @@ pymol_class = portein.Pymol(protein=protein_config,
 image_file = pymol_class.run()
 ```
 
-     Ray: render time: 6.57 sec. = 548.2 frames/hour (13.15 sec. accum.).
+     Ray: render time: 4.11 sec. = 876.9 frames/hour (7.92 sec. accum.).
 
 
 ![Simple Pymol example](examples/7lc2_simple_rotated_pymol.png)
@@ -122,10 +126,11 @@ And then:
 portein pymol examples/protein_example_simple.yaml
 ```
 
-Here's a fancier version with three layers:
+Here's a fancier version with four layers:
 - Layer 1 is surface at 0.5 opacity
 - Layer 2 is cartoon
 - Layer 3 has only some residues displayed as sticks, set by the `selection="highlight"` in `PymolRepresentationConfig` and `highlight_residues` in `ProteinConfig`. 
+- Layer 4 shows a ligand as sticks in green
 
 The `selection` attribute can also be any kind of Pymol selection ("all" by default)
 
@@ -138,15 +143,17 @@ protein_config = portein.ProteinConfig(pdb_file="7lc2", rotate=True, output_pref
                                        width=1000)
 layers = [portein.PymolConfig(representation="surface", pymol_settings=pymol_settings, transparency=0.5),
           portein.PymolConfig(representation="cartoon", pymol_settings=pymol_settings),
-          portein.PymolConfig(representation="sticks", pymol_settings=pymol_settings, selection="highlight")]
+          portein.PymolConfig(representation="sticks", pymol_settings=pymol_settings, selection="highlight"),
+          portein.PymolConfig(representation="sticks", pymol_settings=pymol_settings, selection="resn GNP", color="green")]
 
 pymol_class = portein.Pymol(protein=protein_config, layers=layers, buffer=10)
 image_file = pymol_class.run()
 ```
 
-     Ray: render time: 20.15 sec. = 178.6 frames/hour (90.87 sec. accum.).
-     Ray: render time: 5.29 sec. = 680.7 frames/hour (102.32 sec. accum.).
-     Ray: render time: 0.45 sec. = 8005.3 frames/hour (103.23 sec. accum.).
+     Ray: render time: 11.48 sec. = 313.6 frames/hour (55.84 sec. accum.).
+     Ray: render time: 3.12 sec. = 1155.5 frames/hour (62.12 sec. accum.).
+     Ray: render time: 0.31 sec. = 11764.9 frames/hour (62.73 sec. accum.).
+     Ray: render time: 0.30 sec. = 12119.1 frames/hour (63.33 sec. accum.).
 
 
 ![Pymol example](examples/7lc2_rotated_pymol.png)
@@ -156,6 +163,41 @@ This can also be achieved from the command line using YAML config files
 ```sh
 portein pymol examples/protein_example.yaml examples/pymol_layers_example.yaml --buffer 10
 ```
+
+Here's an example of zooming into a ligand pocket:
+
+
+```python
+pdb = pd.parsePDB("7lc2")
+
+ligand_pocket = pdb.select("within 6 of (chain A and resname GNP)")
+prox_chains = ligand_pocket.getChids()
+ligand_pocket_coords = ligand_pocket.getCoords()
+
+# Get best rotation:
+matrix = portein.get_best_transformation(ligand_pocket_coords)
+
+# Apply the transformation to the protein
+pdb_oriented = pd.applyTransformation(pd.Transformation(matrix), pdb)
+pd.writePDB("examples/7lc2_rotated_ligand.pdb", pdb_oriented.select(" or ".join([f"chain {chain}" for chain in prox_chains])))
+
+protein_config = portein.ProteinConfig(pdb_file="examples/7lc2_rotated_ligand.pdb", rotate=False, output_prefix="examples/7lc2_ligand",
+                                       chain_colormap="white",
+                                       width=1000)
+layers = [portein.PymolConfig(representation="surface", pymol_settings=pymol_settings, transparency=0.3),
+          portein.PymolConfig(representation="cartoon", pymol_settings=pymol_settings),
+          portein.PymolConfig(representation="sticks", pymol_settings=pymol_settings, selection="(chain A and resn GNP)", color="green")]
+
+pymol_class = portein.Pymol(protein=protein_config, layers=layers)
+image_file = pymol_class.run()
+```
+
+     Ray: render time: 5.01 sec. = 718.2 frames/hour (82.49 sec. accum.).
+     Ray: render time: 1.85 sec. = 1941.8 frames/hour (86.32 sec. accum.).
+     Ray: render time: 0.19 sec. = 19317.6 frames/hour (86.69 sec. accum.).
+
+
+![Pymol example](examples/7lc2_ligand_pymol.png)
 
 ## Plot `illustrate` images
 
@@ -198,25 +240,27 @@ See the `configs` folder for parameter settings available for each plot type.
 
 
 ```python
-protein_config = portein.ProteinConfig(pdb_file="7lc2", rotate=True, height=10, output_prefix="examples/7lc2")
+protein_config = portein.ProteinConfig(pdb_file="7lc2", rotate=True, width=1000, output_prefix="examples/7lc2")
 ss = portein.SecondaryStructure(protein_config=protein_config, 
                                 helix_config=portein.HelixConfig(), 
                                 sheet_config=portein.SheetConfig(), 
-                                turn_config=portein.TurnConfig())
+                                turn_config=portein.TurnConfig(),
+                                dpi=100)
 ss.run()
 ```
     
-![png](examples/README_files/images/README_19_1.png)
+![png](examples/README_files/examples/README_26_1.png)
     
 And from the command line:
 
 ```sh
 portein secondary 7lc2
 ```
+
 Use `-h`, `-s` and `-t` to pass helix, turn, and sheet config files
 
-
 Modify the figure e.g to highlight specific residues using the returned Axes object:
+
 
 ```python
 ax = ss.run()
@@ -228,7 +272,7 @@ ax.scatter(ss.coords[highlight_residues, 0],
            edgecolor="black", linewidth=2)
 ```
     
-![png](examples/README_files/images/README_21_1.png)
+![png](examples/README_files/examples/README_29_1.png)
     
 
 
@@ -240,6 +284,6 @@ fig, ax = plt.subplots(1, figsize=(50, 1))
 ss.run(ax=ax, linear=True)
 ```
     
-![png](examples/README_files/images/README_23_1.png)
+![png](examples/README_files/examples/README_31_1.png)
     
 
