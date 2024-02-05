@@ -20,7 +20,7 @@ def get_best_transformation(coords: ty.Union[pd.AtomGroup, np.ndarray, str, Path
     4x4 transformation matrix
     """
     if type(coords) in [str, Path]:
-        coords = pd.parsePDB(coords).select("protein and calpha").getCoords()
+        coords = pd.parsePDB(coords).getCoords()
     elif type(coords) == pd.AtomGroup:
         coords = coords.getCoords()
     matrix = np.eye(4)
@@ -153,7 +153,7 @@ def compile_numba_functions():
 
 
 def rotate_protein(pdb: pd.AtomGroup):
-    coords = pdb.select("protein and calpha").getCoords()
+    coords = pdb.getCoords()
     matrix = get_best_transformation(coords)
     pdb = pd.applyTransformation(pd.Transformation(matrix), pdb)
     return pdb
