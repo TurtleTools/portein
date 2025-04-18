@@ -161,7 +161,8 @@ from biotite.structure import io as bio
 # Select the ligand and the pocket residues
 pdb = portein.read_structure("7lc2")
 ligand = pdb[(pdb.chain_id == "A") & (pdb.res_name == "GNP")]
-ligand_pocket = pdb[np.unique(np.where(struct.distance(pdb.coord[:, np.newaxis], ligand.coord[np.newaxis, :]) < 6)[0])]
+mask = struct.CellList(pdb, 6).get_atoms(ligand.coord, 6, as_mask=True).any(axis=0)
+ligand_pocket = pdb[mask]
 proximal_chains = struct.get_chains(ligand_pocket)
 
 # Get best rotation:
