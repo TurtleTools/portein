@@ -8,6 +8,7 @@ from portein.config import (
     PymolConfig,
     IllustrateConfig,
     ProteinConfig,
+    read_structure,
 )
 from portein.plot.image_utils import find_size
 from portein.plot.secondary_structure import SecondaryStructure
@@ -23,6 +24,7 @@ from portein.rotate import (
 
 __all__ = [
     # portein
+    "read_structure",
     "rotate_protein",
     "get_best_transformation",
     "apply_transformation",

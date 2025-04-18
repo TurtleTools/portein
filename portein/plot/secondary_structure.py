@@ -1,14 +1,19 @@
 from pathlib import Path
-import subprocess
 import matplotlib.pyplot as plt
 import numpy as np
-import prody as pd
 from matplotlib import patches as m_patches
 from matplotlib import transforms as m_transforms
 import typing as ty
 from dataclasses import dataclass
 from portein import config
 from portein.plot import image_utils
+from portein.config import read_structure
+from subprocess import SubprocessError
+from tempfile import NamedTemporaryFile
+from biotite.application.application import AppState, requires_state
+from biotite.application.localapp import LocalApp, cleanup_tempfile, get_version
+from biotite.structure.io.pdb import PDBFile
+from biotite.structure.io.pdb.convert import set_structure
 
 SS_DICT = {
     "H": "H",
@@ -20,6 +25,152 @@ SS_DICT = {
     "S": "T",
     "C": "T",
 }
+
+
+class DsspApp(LocalApp):
+    r"""
+    [Modified from biotite.application.dssp.DsspApp]
+
+    Annotate the secondary structure of a protein structure using the
+    *DSSP* software.
+
+    Internally this creates a :class:`Popen` instance, which handles
+    the execution.
+
+    DSSP differentiates between 8 different types of secondary
+    structure elements:
+
+       - C: loop, coil or irregular
+       - H: :math:`{\alpha}`-helix
+       - B: :math:`{\beta}`-bridge
+       - E: extended strand, participation in :math:`{\beta}`-ladder
+       - G: 3 :sub:`10`-helix
+       - I: :math:`{\pi}`-helix
+       - T: hydrogen bonded turn
+       - S: bend
+
+    Parameters
+    ----------
+    atom_array : AtomArray
+        The atom array to be annotated.
+    bin_path : str, optional
+        Path of the *DDSP* binary.
+
+    Examples
+    --------
+
+    >>> app = DsspApp(atom_array)
+    >>> app.start()
+    >>> app.join()
+    >>> print(app.get_sse())
+    ['C' 'H' 'H' 'H' 'H' 'H' 'H' 'H' 'T' 'T' 'G' 'G' 'G' 'G' 'T' 'C' 'C' 'C'
+     'C' 'C']
+    """
+
+    def __init__(self, atom_array, bin_path="mkdssp"):
+        super().__init__(bin_path)
+
+        # mkdssp requires also the
+        # 'occupancy', 'b_factor' and 'charge' fields
+        # -> Add these annotations to a copy of the input structure
+        self._array = atom_array.copy()
+        categories = self._array.get_annotation_categories()
+        if "charge" not in categories:
+            self._array.set_annotation(
+                "charge", np.zeros(self._array.array_length(), dtype=int)
+            )
+        if "b_factor" not in categories:
+            self._array.set_annotation(
+                "b_factor", np.zeros(self._array.array_length(), dtype=float)
+            )
+        if "occupancy" not in categories:
+            self._array.set_annotation(
+                "occupancy", np.ones(self._array.array_length(), dtype=float)
+            )
+        try:
+            # The parameters have changed in version 4
+            self._new_cli = get_version(bin_path)[0] >= 4
+        except SubprocessError:
+            # In older versions, the no version is returned with `--version`
+            # -> a SubprocessError is raised
+            self._new_cli = False
+        self._in_file = NamedTemporaryFile("w", suffix=".pdb", delete=False)
+        self._out_file = NamedTemporaryFile("r", suffix=".dssp", delete=False)
+
+    def run(self):
+        in_file = PDBFile()
+        set_structure(in_file, self._array)
+        in_file.write(self._in_file)
+        self._in_file.flush()
+        if self._new_cli:
+            self.set_arguments([self._in_file.name, self._out_file.name, "-v"])
+        else:
+            self.set_arguments(["-i", self._in_file.name, "-o", self._out_file.name])
+        super().run()
+
+    def evaluate(self):
+        super().evaluate()
+        lines = self._out_file.read().split("\n")
+        # Index where SSE records start
+        sse_start = None
+        for i, line in enumerate(lines):
+            if line.startswith("  #  RESIDUE AA STRUCTURE"):
+                sse_start = i + 1
+        if sse_start is None:
+            raise ValueError("DSSP file does not contain SSE records")
+        # Remove "!" for missing residues
+        lines = [
+            line for line in lines[sse_start:] if len(line) != 0 and line[13] != "!"
+        ]
+        self._sse = np.zeros(len(lines), dtype="U1")
+        # Parse file for SSE letters
+        for i, line in enumerate(lines):
+            self._sse[i] = line[16]
+        self._sse[self._sse == " "] = "C"
+
+    def clean_up(self):
+        super().clean_up()
+        cleanup_tempfile(self._in_file)
+        cleanup_tempfile(self._out_file)
+
+    @requires_state(AppState.JOINED)
+    def get_sse(self):
+        """
+        Get the resulting secondary structure assignment.
+
+        Returns
+        -------
+        sse : ndarray, dtype="U1"
+            An array containing DSSP secondary structure symbols
+            corresponding to the residues in the input atom array.
+        """
+        return self._sse
+
+    @staticmethod
+    def annotate_sse(atom_array, bin_path="mkdssp"):
+        """
+        Perform a secondary structure assignment to an atom array.
+
+        This is a convenience function, that wraps the :class:`DsspApp`
+        execution.
+
+        Parameters
+        ----------
+        atom_array : AtomArray
+            The atom array to be annotated.
+        bin_path : str, optional
+            Path of the DDSP binary.
+
+        Returns
+        -------
+        sse : ndarray, dtype="U1"
+            An array containing DSSP secondary structure symbols
+            corresponding to the residues in the input atom array.
+        """
+        app = DsspApp(atom_array, bin_path)
+        app.start()
+        app.join()
+        return app.get_sse()
 
 
 @dataclass
@@ -69,8 +220,13 @@ class SecondaryStructure:
         -------
         matplotlib Axes
         """
-        structure = self.run_dssp(overwrite=overwrite)
-        self.coords, self.ss_elements = self.get_coords_and_ss_elements(structure)
+        structure = read_structure(self.protein_config.pdb_file)
+        sse = DsspApp.annotate_sse(structure[~structure.hetero])
+        self.coords = structure[(structure.atom_name == "CA") & ~structure.hetero].coord
+        assert len(self.coords) == len(sse), (
+            f"Number of coordinates and secondary structure elements must be the same, got {len(self.coords)} and {len(sse)}"
+        )
+        self.ss_elements = get_ss_elements(sse)
         if ax is None:
             fig, ax = plt.subplots(
                 1,
@@ -114,38 +270,6 @@ class SecondaryStructure:
         for direction in ["left", "right", "top", "bottom"]:
             ax.spines[direction].set_visible(False)
         return ax
-
-    def run_dssp(self, overwrite=False):
-        dssp_pdb_file = f"{self.protein_config.output_prefix}_dssp.pdb"
-        if overwrite or not Path(dssp_pdb_file).exists():
-            with open(self.protein_config.pdb_file, "r") as f:
-                with open(dssp_pdb_file, "w") as f2:
-                    f2.write("HEADER\n")
-                    for i, line in enumerate(f):
-                        if line.startswith("REMARK"):
-                            continue
-                        f2.write(line)
-
-        structure = pd.parsePDB(str(dssp_pdb_file))
-        dssp_file = f"{self.protein_config.output_prefix}_dssp.dssp"
-        if overwrite or not Path(dssp_file).exists():
-            with open(dssp_file, "w") as f:
-                subprocess.check_call(
-                    ["mkdssp", dssp_pdb_file, "--output-format", "dssp"], stdout=f
-                )
-        structure = pd.parseDSSP(str(dssp_file), structure)
-        return structure
-
-    def get_coords_and_ss_elements(self, structure: pd.AtomGroup):
-        structure_alpha = structure.select("calpha")
-        coords = structure_alpha.getCoords()
-        ss_list = structure_alpha.getSecstrs()
-        ss_elements = get_ss_elements(ss_list)
-        return coords, ss_elements
-    
-    def cleanup(self):
-        Path(f"{self.protein_config.output_prefix}_dssp.pdb").unlink()
-        Path(f"{self.protein_config.output_prefix}_dssp.dssp").unlink()
 
 
 def make_helix_wave(config: config.HelixConfig, length):

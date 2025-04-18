@@ -1,28 +1,23 @@
-import typing as ty
-from pathlib import Path
-
 import numba as nb
 import numpy as np
-import prody as pd
+from biotite.structure import AtomArray
+from biotite import structure as bio_struct
 
 
-def get_best_transformation(coords: ty.Union[pd.AtomGroup, np.ndarray, str, Path]):
+@nb.njit
+def get_best_transformation(coords: np.ndarray):
     """
     Get transformation matrix for best 2D projection (in the X-Y plane)
 
     Parameters
     ----------
     coords
-        either an array of 3D coordinates, a PDB file path, or a prody AtomGroup
+        array of 3D coordinates
 
     Returns
     -------
-    4x4 transformation matrix
+    Rotation angles and translation vector
     """
-    if type(coords) in [str, Path]:
-        coords = pd.parsePDB(coords).getCoords()
-    elif type(coords) == pd.AtomGroup:
-        coords = coords.getCoords()
     matrix = np.eye(4)
     for _ in range(20):
         m = find_best_projection(coords)
@@ -31,7 +26,22 @@ def get_best_transformation(coords: ty.Union[pd.AtomGroup, np.ndarray, str, Path
         coords = apply_transformation(coords, m)
         matrix = m @ matrix
     matrix = rotate_to_maximize_bb_height(coords[:, :2]) @ matrix
-    return matrix
+    # Extract rotation angles from transformation matrix
+    sy = np.sqrt(matrix[0, 0] * matrix[0, 0] + matrix[1, 0] * matrix[1, 0])
+    singular = sy < 1e-6
+    if not singular:
+        x_angle = np.arctan2(matrix[2, 1], matrix[2, 2])
+        y_angle = np.arctan2(-matrix[2, 0], sy)
+        z_angle = np.arctan2(matrix[1, 0], matrix[0, 0])
+    else:
+        x_angle = np.arctan2(-matrix[1, 2], matrix[1, 1])
+        y_angle = np.arctan2(-matrix[2, 0], sy)
+        z_angle = 0
+
+    rotation = np.array([x_angle, y_angle, z_angle])
+    translation = matrix[:3, 3]
+
+    return rotation, translation
 
 
 @nb.njit
@@ -84,7 +94,9 @@ def find_best_projection(points):
     i, j, k = np.eye(3)
     if np.sum((new_axis - k) ** 2) < 1e-8:
         return matrix
-    theta = np.arccos(np.dot(new_axis, k))
+    dot_product = np.dot(new_axis, k)
+    dot_product = max(-1.0, min(1.0, dot_product))
+    theta = np.arccos(dot_product)
     b = np.cross(k, new_axis)
     b_hat = b / np.sqrt(np.sum(b**2))
     q0 = np.cos(theta / 2)
@@ -152,8 +164,8 @@ def compile_numba_functions():
     get_best_transformation(np.random.random((10, 3)))
 
 
-def rotate_protein(pdb: pd.AtomGroup):
-    coords = pdb.getCoords()
-    matrix = get_best_transformation(coords)
-    pdb = pd.applyTransformation(pd.Transformation(matrix), pdb)
+def rotate_protein(pdb: AtomArray):
+    coords = pdb.coord
+    rotation, translation = get_best_transformation(coords.astype(np.float64))
+    pdb = bio_struct.rotate(bio_struct.translate(pdb, translation), rotation)
     return pdb

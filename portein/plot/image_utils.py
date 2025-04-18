@@ -43,9 +43,9 @@ def find_size(
     -------
     (width, height)
     """
-    assert (
-        width is not None or height is not None
-    ), "Either one of height or width must be set"
+    assert width is not None or height is not None, (
+        "Either one of height or width must be set"
+    )
     if height is not None and width is not None:
         return width, height
     min_x, max_x = np.min(points[:, 0]), np.max(points[:, 0])

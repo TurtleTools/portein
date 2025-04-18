@@ -4,13 +4,32 @@ import typing
 
 from matplotlib.typing import ColorType
 from portein.plot import image_utils
-import prody as pd
 from matplotlib import colormaps
 from itertools import groupby
 from operator import itemgetter
 from matplotlib import colors as m_colors
 from portein.rotate import rotate_protein
 import yaml
+import biotite.structure.io as bio_io
+from biotite.structure.io import pdb, pdbx
+import biotite.structure as bio_struct
+from biotite.database import rcsb
+from biotite.structure import AtomArray
+from tempfile import gettempdir
+
+
+def read_structure(path: typing.Union[str, Path]) -> AtomArray:
+    if Path(path).suffix == ".pdb":
+        return pdb.PDBFile.read(path).get_structure(model=1)
+    elif Path(path).suffix == ".cif":
+        return pdbx.get_structure(path, model=1)
+    else:
+        try:
+            cif_file_path = rcsb.fetch(path, "cif", gettempdir())
+            cif_file = pdbx.CIFFile.read(cif_file_path)
+            return pdbx.get_structure(cif_file, model=1)
+        except Exception as e:
+            raise ValueError(f"Unsupported file: {path}") from e
 
 
 @dataclass
@@ -153,9 +172,9 @@ class ProteinConfig:
     """prefix for output files. If None uses the PDB file name"""
     chain_colormap: typing.Union[str, typing.Dict[str, ColorType]] = "Set3"
     """colormap to use for coloring chains, either a matplotlib colormap or a dictionary of {chain: color}"""
-    highlight_residues: typing.Dict[
-        str, typing.Dict[ColorType, typing.List[int]]
-    ] = None
+    highlight_residues: typing.Dict[str, typing.Dict[ColorType, typing.List[int]]] = (
+        None
+    )
     """dictionary of {chain: {color: [residue numbers]}}, use None to set the color to the chain color"""
     width: int = 1000
     """width of image (in pixels)"""
@@ -179,7 +198,7 @@ class ProteinConfig:
         if self.rotate:
             self.save_rotated()
         self.width, self.height = image_utils.find_size(
-            self.pdb.getCoords(), width=self.width, height=self.height
+            self.pdb.coord, width=self.width, height=self.height
         )
         if self.highlight_residues is None:
             self.highlight_residues = {}
@@ -200,19 +219,19 @@ class ProteinConfig:
         return cls(**yaml.load(yaml_str, Loader=loader))
 
     @property
-    def pdb(self):
-        return pd.parsePDB(str(self.pdb_file))
+    def pdb(self) -> AtomArray:
+        return read_structure(self.pdb_file)
 
     def save_rotated(self):
         pdb = rotate_protein(self.pdb)
         self.output_prefix = f"{self.output_prefix}_rotated"
-        pd.writePDB(f"{self.output_prefix}.pdb", pdb)
+        bio_io.save_structure(f"{self.output_prefix}.pdb", pdb)
         self.pdb_file = f"{self.output_prefix}.pdb"
 
     def get_chain_colors(self):
         if isinstance(self.chain_colormap, str):
             chain_to_color = {}
-            chains = sorted(set(self.pdb.getChids()))
+            chains = sorted(set(bio_struct.get_chains(self.pdb)))
             colormap = colormaps.get(self.chain_colormap, None)
             for i, chain in enumerate(chains):
                 if colormap is None:
@@ -307,7 +326,7 @@ class PymolConfig:
 class IllustrateConfig:
     illustrate_binary: str = "illustrate"
     """path to illustrate binary"""
-    convert_binary: str = "convert"
+    convert_binary: str = "magick"
     """path to convert binary"""
     center: str = "auto"
     """center of the image, one of 'auto' or 'center'"""

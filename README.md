@@ -5,7 +5,6 @@ Portein plots 3D proteins according to their best 2D projection (best = greatest
 
 
 ```python
-import prody as pd
 import portein
 import matplotlib.pyplot as plt
 import numpy as np
@@ -23,13 +22,12 @@ Portein uses some linear algebra (for [Optimal rotation of 3D model for 2D proje
 
 
 ```python
-pdb = pd.parsePDB("7lc2")
-old_coords = pdb.select("protein and calpha").getCoords()
+pdb = portein.read_structure("7lc2")
+old_coords = pdb[pdb.atom_name == "CA"].coord
 
 # Rotate the protein
 pdb_oriented = portein.rotate_protein(pdb)
-pd.writePDB("examples/7lc2_rotated.pdb", pdb_oriented)
-new_coords = pdb_oriented.select("protein and calpha").getCoords()
+new_coords = pdb_oriented[pdb_oriented.atom_name == "CA"].coord
 
 # Find the best size of the plot based on the coordinates and a given height (or width)
 old_width, old_height = portein.find_size(old_coords, height=5)
@@ -49,7 +47,7 @@ plt.tight_layout()
 
 
     
-![png](examples/README_files/examples/README_6_0.png)
+![png](examples/README_files/README_7_0.png)
     
 
 
@@ -105,9 +103,6 @@ pymol_class = portein.Pymol(protein=protein_config,
 image_file = pymol_class.run()
 ```
 
-     Ray: render time: 4.11 sec. = 876.9 frames/hour (7.92 sec. accum.).
-
-
 ![Simple Pymol example](examples/7lc2_simple_rotated_pymol.png)
 
 To do this from the command line, you need a YAML file with info about the protein:
@@ -150,12 +145,6 @@ pymol_class = portein.Pymol(protein=protein_config, layers=layers, buffer=10)
 image_file = pymol_class.run()
 ```
 
-     Ray: render time: 11.48 sec. = 313.6 frames/hour (55.84 sec. accum.).
-     Ray: render time: 3.12 sec. = 1155.5 frames/hour (62.12 sec. accum.).
-     Ray: render time: 0.31 sec. = 11764.9 frames/hour (62.73 sec. accum.).
-     Ray: render time: 0.30 sec. = 12119.1 frames/hour (63.33 sec. accum.).
-
-
 ![Pymol example](examples/7lc2_rotated_pymol.png)
 
 This can also be achieved from the command line using YAML config files
@@ -168,18 +157,21 @@ Here's an example of zooming into a ligand pocket:
 
 
 ```python
-pdb = pd.parsePDB("7lc2")
+from biotite import structure as struct
+from biotite.structure import io as bio
 
-ligand_pocket = pdb.select("within 6 of (chain A and resname GNP)")
-prox_chains = ligand_pocket.getChids()
-ligand_pocket_coords = ligand_pocket.getCoords()
+# Select the ligand and the pocket residues
+pdb = portein.read_structure("7lc2")
+ligand = pdb[(pdb.chain_id == "A") & (pdb.res_name == "GNP")]
+ligand_pocket = pdb[np.unique(np.where(struct.distance(pdb.coord[:, np.newaxis], ligand.coord[np.newaxis, :]) < 6)[0])]
+proximal_chains = struct.get_chains(ligand_pocket)
 
 # Get best rotation:
-matrix = portein.get_best_transformation(ligand_pocket_coords)
+rotation, translation = portein.get_best_transformation(ligand_pocket.coord.astype(np.float64))
+pdb_oriented = struct.rotate(struct.translate(pdb, translation), rotation)
 
-# Apply the transformation to the protein
-pdb_oriented = pd.applyTransformation(pd.Transformation(matrix), pdb)
-pd.writePDB("examples/7lc2_rotated_ligand.pdb", pdb_oriented.select(" or ".join([f"chain {chain}" for chain in prox_chains])))
+# Save only the proximal chains
+bio.save_structure("examples/7lc2_rotated_ligand.pdb", pdb_oriented[np.isin(pdb_oriented.chain_id, proximal_chains)])
 
 protein_config = portein.ProteinConfig(pdb_file="examples/7lc2_rotated_ligand.pdb", rotate=False, output_prefix="examples/7lc2_ligand",
                                        chain_colormap="white",
@@ -191,11 +183,6 @@ layers = [portein.PymolConfig(representation="surface", pymol_settings=pymol_set
 pymol_class = portein.Pymol(protein=protein_config, layers=layers)
 image_file = pymol_class.run()
 ```
-
-     Ray: render time: 5.01 sec. = 718.2 frames/hour (82.49 sec. accum.).
-     Ray: render time: 1.85 sec. = 1941.8 frames/hour (86.32 sec. accum.).
-     Ray: render time: 0.19 sec. = 19317.6 frames/hour (86.69 sec. accum.).
-
 
 ![Pymol example](examples/7lc2_ligand_pymol.png)
 
@@ -248,8 +235,7 @@ ss = portein.SecondaryStructure(protein_config=protein_config,
                                 dpi=100)
 ss.run()
 ```
-    
-![png](examples/README_files/examples/README_26_1.png)
+![png](examples/README_files/README_27_1.png)
     
 And from the command line:
 
@@ -271,8 +257,7 @@ ax.scatter(ss.coords[highlight_residues, 0],
            color="red", s=100, 
            edgecolor="black", linewidth=2)
 ```
-    
-![png](examples/README_files/examples/README_29_1.png)
+![png](examples/README_files/README_30_1.png)
     
 
 
@@ -283,7 +268,6 @@ Plot as a linear secondary structure diagram:
 fig, ax = plt.subplots(1, figsize=(50, 1))
 ss.run(ax=ax, linear=True)
 ```
-    
-![png](examples/README_files/examples/README_31_1.png)
+![png](examples/README_files/README_32_1.png)
     
 
