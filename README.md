@@ -9,8 +9,6 @@ import portein
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
-import warnings
-warnings.filterwarnings('ignore')
 portein.compile_numba_functions()
 ```
 
