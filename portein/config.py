@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
+import tempfile
 import typing
 
 from matplotlib.typing import ColorType
@@ -29,7 +30,13 @@ def read_structure(path: typing.Union[str, Path]) -> AtomArray:
             cif_file = pdbx.CIFFile.read(cif_file_path)
             return pdbx.get_structure(cif_file, model=1)
         except Exception as e:
-            raise ValueError(f"Unsupported file: {path}") from e
+            try:
+                return pdb.PDBFile.read(path).get_structure(model=1)
+            except Exception as e:
+                try:
+                    return pdbx.get_structure(path, model=1)
+                except Exception as e:
+                    raise ValueError(f"Unsupported file: {path}") from e
 
 
 @dataclass
@@ -164,7 +171,7 @@ class TurnConfig:
 
 @dataclass
 class ProteinConfig:
-    pdb_file: str
+    pdb_file: str | AtomArray
     """PDB file to read"""
     rotate: bool = False
     """rotate the protein to have the best orientation"""
@@ -191,8 +198,13 @@ class ProteinConfig:
         self.finish()
 
     def finish(self):
-        if "." in str(self.pdb_file):
-            self.pdb_file = Path(self.pdb_file).resolve()
+        if isinstance(self.pdb_file, AtomArray):
+            with tempfile.NamedTemporaryFile(suffix=".pdb", delete=False) as temp_file:
+                bio_io.save_structure(temp_file.name, self.pdb_file)
+                self.pdb_file = temp_file.name
+        else:
+            if "." in str(self.pdb_file):
+                self.pdb_file = Path(self.pdb_file).resolve()
         if self.output_prefix is None:
             self.output_prefix = Path(self.pdb_file).stem
         if self.rotate:
