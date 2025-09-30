@@ -28,13 +28,13 @@ def read_structure(path: typing.Union[str, Path]) -> AtomArray:
         try:
             cif_file_path = rcsb.fetch(path, "cif", gettempdir())
             cif_file = pdbx.CIFFile.read(cif_file_path)
-            return pdbx.get_structure(cif_file, model=1, extra_fields=["b_factor"])
+            return pdbx.get_structure(cif_file, model=1)
         except Exception as e:
             try:
                 return pdb.PDBFile.read(path).get_structure(model=1, extra_fields=["b_factor"])
             except Exception as e:
                 try:
-                    return pdbx.get_structure(path, model=1, extra_fields=["b_factor"])
+                    return pdbx.get_structure(path, model=1)
                 except Exception as e:
                     raise ValueError(f"Unsupported file: {path}") from e
 
