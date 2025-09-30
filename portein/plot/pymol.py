@@ -93,6 +93,8 @@ class Pymol:
                 expression=layer.spectrum,
                 selection=layer.selection,
                 palette=layer.color,
+                minimum=0,
+                maximum=100,
             )
         elif layer.color is not None:
             cmd.color(f"0x{m_colors.to_hex(layer.color).lower()[1:]}", layer.selection)
