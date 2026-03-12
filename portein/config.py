@@ -23,7 +23,10 @@ def read_structure(path: typing.Union[str, Path]) -> AtomArray:
     if Path(path).suffix == ".pdb":
         return pdb.PDBFile.read(path).get_structure(model=1, extra_fields=["b_factor"])
     elif Path(path).suffix == ".cif":
-        return pdbx.get_structure(path, model=1)
+        try:
+            return pdbx.get_structure(pdbx.CIFFile.read(path), model=1, extra_fields=["b_factor"])
+        except Exception as e:
+            return pdbx.get_structure(pdbx.CIFFile.read(path), model=1)
     else:
         try:
             cif_file_path = rcsb.fetch(path, "cif", gettempdir())
@@ -34,7 +37,7 @@ def read_structure(path: typing.Union[str, Path]) -> AtomArray:
                 return pdb.PDBFile.read(path).get_structure(model=1, extra_fields=["b_factor"])
             except Exception as e:
                 try:
-                    return pdbx.get_structure(path, model=1)
+                    return bio_struct.load_structure(path, model=1)
                 except Exception as e:
                     raise ValueError(f"Unsupported file: {path}") from e
 
@@ -199,7 +202,7 @@ class ProteinConfig:
 
     def finish(self):
         if isinstance(self.pdb_file, AtomArray):
-            with tempfile.NamedTemporaryFile(suffix=".pdb", delete=False) as temp_file:
+            with tempfile.NamedTemporaryFile(suffix=".cif", delete=False) as temp_file:
                 bio_io.save_structure(temp_file.name, self.pdb_file)
                 self.pdb_file = temp_file.name
         else:
@@ -237,8 +240,8 @@ class ProteinConfig:
     def save_rotated(self):
         pdb = rotate_protein(self.pdb)
         self.output_prefix = f"{self.output_prefix}_rotated"
-        bio_io.save_structure(f"{self.output_prefix}.pdb", pdb)
-        self.pdb_file = f"{self.output_prefix}.pdb"
+        bio_io.save_structure(f"{self.output_prefix}.cif", pdb)
+        self.pdb_file = f"{self.output_prefix}.cif"
 
     def get_chain_colors(self):
         if isinstance(self.chain_colormap, str):
