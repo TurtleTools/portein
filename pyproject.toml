@@ -10,6 +10,7 @@ readme = "README.md"
 license = { file = "LICENSE" }
 authors = [
     { name = "Janani Durairaj"},
+    { name = "Mehmet Akdel" },
 ]
 requires-python = ">=3.10"
 classifiers = [
@@ -53,36 +54,28 @@ portein = "portein.__main__:app"
 include = ["portein*"]
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 target-version = "py310"
+extend-exclude = ["*.ipynb"]  # README.ipynb is documentation, not source
 
 [tool.ruff.lint]
-# Start permissive: pyflakes (F) + a subset of pycodestyle (E) + isort (I).
-# Add more rule sets as the codebase matures.
-select = ["E", "F", "I", "W"]
-ignore = [
-    "E501",  # line-too-long — long string literals and yaml-block writers
-    "E741",  # ambiguous variable names (`l`, `i`, `O`) — present in math code
-]
+# pyflakes (F) + pycodestyle (E,W) + isort (I) + bugbear (B) + pyupgrade (UP)
+select = ["E", "F", "I", "W", "B", "UP"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["E402"]  # matplotlib.use("Agg") must precede pyplot import
+# rotate.py uses `i, j, k = np.eye(3)` and other one-letter math names
+"portein/rotate.py" = ["E741"]
+# illustrate.py writes Illustrate's fixed-width input format — these are data lines
+"portein/plot/illustrate.py" = ["E501"]
+# numpydoc docstrings occasionally exceed 120 chars
+"portein/config.py" = ["E501"]
+"portein/plot/secondary_structure.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.10"
 ignore_missing_imports = true
 warn_unused_ignores = true
-# Be permissive on existing code; tighten later. The `misc` disable covers
-# from_yaml() methods that act as classmethods without the decorator (pre-existing).
-disable_error_code = [
-    "assignment",
-    "attr-defined",
-    "union-attr",
-    "var-annotated",
-    "valid-type",
-    "arg-type",
-    "misc",
-]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -1,5 +1,4 @@
 import tempfile
-import typing
 from dataclasses import dataclass
 from itertools import groupby
 from operator import itemgetter
@@ -20,7 +19,7 @@ from portein.plot import image_utils
 from portein.rotate import rotate_protein
 
 
-def read_structure(path: typing.Union[str, Path]) -> AtomArray:
+def read_structure(path: str | Path) -> AtomArray:
     if Path(path).suffix == ".pdb":
         return pdb.PDBFile.read(path).get_structure(model=1, extra_fields=["b_factor"])
     elif Path(path).suffix == ".cif":
@@ -84,7 +83,7 @@ class HelixConfig:
         self.wave_arc_height = width
 
     @classmethod
-    def from_yaml(cls, yaml_str: typing.Union[str, Path]):
+    def from_yaml(cls, yaml_str: str | Path):
         """
         Create from a yaml string or file
         """
@@ -122,7 +121,7 @@ class SheetConfig:
     opacity: float = 1.0
 
     @classmethod
-    def from_yaml(cls, yaml_str: typing.Union[str, Path]):
+    def from_yaml(cls, yaml_str: str | Path):
         """
         Create from a yaml string or file
         """
@@ -160,7 +159,7 @@ class TurnConfig:
     opacity: float = 0.8
 
     @classmethod
-    def from_yaml(cls, yaml_str: typing.Union[str, Path]):
+    def from_yaml(cls, yaml_str: str | Path):
         """
         Create from a yaml string or file
         """
@@ -181,19 +180,17 @@ class ProteinConfig:
     """rotate the protein to have the best orientation"""
     output_prefix: str = None
     """prefix for output files. If None uses the PDB file name"""
-    chain_colormap: typing.Union[str, typing.Dict[str, ColorType]] = "Set3"
+    chain_colormap: str | dict[str, ColorType] = "Set3"
     """colormap to use for coloring chains, either a matplotlib colormap or a dictionary of {chain: color}"""
-    highlight_residues: typing.Dict[str, typing.Dict[ColorType, typing.List[int]]] = None
+    highlight_residues: dict[str, dict[ColorType, list[int]]] = None
     """dictionary of {chain: {color: [residue numbers]}}, use None to set the color to the chain color"""
     width: int = 1000
     """width of image (in pixels)"""
     height: int = None
     """height of image"""
-    chain_to_color: typing.Dict[str, ColorType] = None
+    chain_to_color: dict[str, ColorType] = None
     """dictionary of {chain: color}"""
-    chain_to_residue_range_color: typing.Dict[
-        str, typing.Dict[typing.Tuple[int, int], ColorType]
-    ] = None
+    chain_to_residue_range_color: dict[str, dict[tuple[int, int], ColorType]] = None
     """dictionary of {chain: {residue_range: color}}"""
 
     def __post_init__(self):
@@ -211,9 +208,7 @@ class ProteinConfig:
             self.output_prefix = Path(self.pdb_file).stem
         if self.rotate:
             self.save_rotated()
-        self.width, self.height = image_utils.find_size(
-            self.pdb.coord, width=self.width, height=self.height
-        )
+        self.width, self.height = image_utils.find_size(self.pdb.coord, width=self.width, height=self.height)
         if self.highlight_residues is None:
             self.highlight_residues = {}
         if self.chain_to_color is None:
@@ -222,7 +217,7 @@ class ProteinConfig:
             self.chain_to_residue_range_color = self.get_residues_colors()
 
     @classmethod
-    def from_yaml(cls, yaml_str: typing.Union[str, Path]):
+    def from_yaml(cls, yaml_str: str | Path):
         """
         Create from a yaml string or file
         """
@@ -253,9 +248,7 @@ class ProteinConfig:
                 else:
                     chain_to_color[chain] = colormap(i)
         else:
-            chain_to_color = {
-                c: m_colors.to_rgb(self.chain_colormap[c]) for c in self.chain_colormap
-            }
+            chain_to_color = {c: m_colors.to_rgb(self.chain_colormap[c]) for c in self.chain_colormap}
         return chain_to_color
 
     def get_residues_colors(self):
@@ -320,7 +313,7 @@ class PymolConfig:
             self.pymol_settings = PYMOL_SETTINGS.copy()
 
     @classmethod
-    def from_yaml(cls, yaml_str: typing.Union[str, Path]):
+    def from_yaml(cls, yaml_str: str | Path):
         """
         Create from a yaml string or file
         """
@@ -344,11 +337,11 @@ class IllustrateConfig:
     """path to convert binary"""
     center: str = "auto"
     """center of the image, one of 'auto' or 'center'"""
-    translation: typing.Tuple[float, float, float] = (0.0, 0.0, 0.0)
+    translation: tuple[float, float, float] = (0.0, 0.0, 0.0)
     """translation x, y, z in Angstroms"""
     scale: float = 10.0
     """scale (pixels/Angstrom), controls size of image"""
-    rotation: typing.Tuple[float, float, float] = (0.0, 0.0, 0.0)
+    rotation: tuple[float, float, float] = (0.0, 0.0, 0.0)
     """rotation x, y, z in degrees"""
     background_color: ColorType = "white"
     """background color"""
@@ -399,7 +392,7 @@ class IllustrateConfig:
     """radius of sidechain atoms (Angstroms)"""
 
     @classmethod
-    def from_yaml(cls, yaml_str: typing.Union[str, Path]):
+    def from_yaml(cls, yaml_str: str | Path):
         """
         Create from a yaml string or file
         """

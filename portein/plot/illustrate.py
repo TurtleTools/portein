@@ -14,6 +14,7 @@ class Illustrate:
     protein_config: config.ProteinConfig
     illustrate_config: config.IllustrateConfig
 
+    @staticmethod
     def from_yaml(protein_config: Path, illustrate_config: Path):
         protein = config.ProteinConfig.from_yaml(protein_config)
         illustrate = config.IllustrateConfig.from_yaml(illustrate_config)
@@ -42,30 +43,26 @@ ATOM  H--------- 0,9999, 0.5,0.5,0.5, 0.0
                 self.write_residue_ranges(file, chain)
 
     def write_residue_ranges(self, file, chain):
-        for color, residue_ranges in self.protein_config.chain_to_residue_range_color[
-            chain
-        ].items():
+        for color, residue_ranges in self.protein_config.chain_to_residue_range_color[chain].items():
             color = m_colors.to_rgb(color)
             for start, end in residue_ranges:
                 self.write_residue_range(file, chain, start, end, color, color)
 
     def write_residue_range(self, file, chain, start, end, calpha_color, sidechain_color):
         file.write(
-            f"ATOM  -C-------{chain} {start},{end+1}, {calpha_color[0]:.1f},{calpha_color[1]:.1f},{calpha_color[2]:.1f}, {self.illustrate_config.carbon_radius}\n"
+            f"ATOM  -C-------{chain} {start},{end + 1}, {calpha_color[0]:.1f},{calpha_color[1]:.1f},{calpha_color[2]:.1f}, {self.illustrate_config.carbon_radius}\n"
         )
         file.write(
-            f"ATOM  -S-------{chain} {start},{end+1}, {calpha_color[0]:.1f},{calpha_color[1]:.1f},{calpha_color[2]:.1f}, {self.illustrate_config.carbon_radius}\n"
+            f"ATOM  -S-------{chain} {start},{end + 1}, {calpha_color[0]:.1f},{calpha_color[1]:.1f},{calpha_color[2]:.1f}, {self.illustrate_config.carbon_radius}\n"
         )
         file.write(
-            f"ATOM  ---------{chain} {start},{end+1}, {sidechain_color[0]:.1f},{sidechain_color[1]:.1f},{sidechain_color[2]:.1f}, {self.illustrate_config.sidechain_radius}\n"
+            f"ATOM  ---------{chain} {start},{end + 1}, {sidechain_color[0]:.1f},{sidechain_color[1]:.1f},{sidechain_color[2]:.1f}, {self.illustrate_config.sidechain_radius}\n"
         )
 
     def write_chain_colors(self, file):
         for chain in self.protein_config.chain_to_color:
             calpha_color = self.protein_config.chain_to_color[chain]
-            sidechain_color = image_utils.alpha_blending(
-                calpha_color, self.illustrate_config.sidechain_transparency
-            )
+            sidechain_color = image_utils.alpha_blending(calpha_color, self.illustrate_config.sidechain_transparency)
             self.write_residue_range(file, chain, 0, 9999, calpha_color, sidechain_color)
 
     def write_end_and_transformations(self, file):
@@ -74,7 +71,7 @@ ATOM  H--------- 0,9999, 0.5,0.5,0.5, 0.0
 center
 {self.illustrate_config.center}
 trans
-{','.join(map(lambda x: f"{x}", self.illustrate_config.translation))}
+{",".join(map(lambda x: f"{x}", self.illustrate_config.translation))}
 scale
 {self.illustrate_config.scale}
 xrot
@@ -84,7 +81,7 @@ yrot
 zrot
 {self.illustrate_config.rotation[2]}
 wor
-{','.join(f"{x}" for x in m_colors.to_rgb(self.illustrate_config.background_color))},{','.join(f"{x}" for x in m_colors.to_rgb(self.illustrate_config.fog_color))},{self.illustrate_config.fog_front_transparency},{self.illustrate_config.fog_back_transparency}
+{",".join(f"{x}" for x in m_colors.to_rgb(self.illustrate_config.background_color))},{",".join(f"{x}" for x in m_colors.to_rgb(self.illustrate_config.fog_color))},{self.illustrate_config.fog_front_transparency},{self.illustrate_config.fog_back_transparency}
 {int(self.illustrate_config.shadow)},{self.illustrate_config.shadow_cone_fraction},{self.illustrate_config.shadow_cone_angle},{self.illustrate_config.shadow_cone_difference},{self.illustrate_config.shadow_cone_max}
 {self.illustrate_config.padding[0]},{self.illustrate_config.padding[1]}
 illustrate
@@ -97,7 +94,7 @@ calculate
 
     def run(self, remove_intermediate_files: bool = True):
         self.make_command_file()
-        with open(f"{self.protein_config.output_prefix}_illustrate.inp", "r") as file:
+        with open(f"{self.protein_config.output_prefix}_illustrate.inp") as file:
             subprocess.run(
                 [self.illustrate_config.illustrate_binary],
                 stdin=file,
@@ -111,8 +108,7 @@ calculate
                 f"{self.protein_config.output_prefix}_illustrate.png",
             ]
         )
-        img = Image.open(f"{self.protein_config.output_prefix}_illustrate.png")
-        img = img.rotate(90, expand=True)
+        img = Image.open(f"{self.protein_config.output_prefix}_illustrate.png").rotate(90, expand=True)
         image_file = f"{self.protein_config.output_prefix}_illustrate.png"
         img.save(image_file)
         if remove_intermediate_files:

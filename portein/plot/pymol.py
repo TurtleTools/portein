@@ -1,4 +1,3 @@
-import typing
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -32,7 +31,7 @@ def _require_pymol():
 @dataclass
 class Pymol:
     protein: config.ProteinConfig
-    layers: typing.List[config.PymolConfig]
+    layers: list[config.PymolConfig]
     """order of representations, selections, and transparencies to layer on top of each other"""
     buffer: float = None
     """buffer around the molecule in Angstroms"""
@@ -41,6 +40,7 @@ class Pymol:
     center_to: str = None
     """center to selection"""
 
+    @staticmethod
     def from_yaml(protein_config: Path, pymol_config: Path, buffer: float = None):
         protein = config.ProteinConfig.from_yaml(protein_config)
         if pymol_config is None:

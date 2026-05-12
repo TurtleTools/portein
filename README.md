@@ -232,9 +232,7 @@ protein_config = portein.ProteinConfig(
 layers = [
     portein.PymolConfig(representation="surface", pymol_settings=pymol_settings, transparency=0.5),
     portein.PymolConfig(representation="cartoon", pymol_settings=pymol_settings),
-    portein.PymolConfig(
-        representation="sticks", pymol_settings=pymol_settings, selection="highlight"
-    ),
+    portein.PymolConfig(representation="sticks", pymol_settings=pymol_settings, selection="highlight"),
     portein.PymolConfig(
         representation="sticks",
         pymol_settings=pymol_settings,
@@ -320,9 +318,7 @@ protein_config = portein.ProteinConfig(
     width=1000,
 )
 
-illustrate = portein.Illustrate(
-    protein_config=protein_config, illustrate_config=portein.IllustrateConfig()
-)
+illustrate = portein.Illustrate(protein_config=protein_config, illustrate_config=portein.IllustrateConfig())
 image_file = illustrate.run()
 ```
 
@@ -349,9 +345,7 @@ See the `configs` folder for parameter settings available for each plot type.
 
 
 ```python
-protein_config = portein.ProteinConfig(
-    pdb_file="7lc2", rotate=True, width=1000, output_prefix="examples/7lc2"
-)
+protein_config = portein.ProteinConfig(pdb_file="7lc2", rotate=True, width=1000, output_prefix="examples/7lc2")
 ss = portein.SecondaryStructure(
     protein_config=protein_config,
     helix_config=portein.HelixConfig(),

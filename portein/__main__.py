@@ -1,10 +1,9 @@
 import warnings
 from pathlib import Path
-from typing import Optional
+from typing import Annotated
 
 import matplotlib.pyplot as plt
 import typer
-from typing_extensions import Annotated
 
 import portein
 
@@ -22,11 +21,11 @@ def pymol(
         typer.Argument(..., help="Path to protein config file", exists=True, show_default=False),
     ],
     config: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Argument(..., help="Path to pymol config file", show_default=False),
     ] = None,
     buffer: Annotated[
-        Optional[float],
+        float | None,
         typer.Option(help="Buffer around the molecule in Angstroms", show_default=False),
     ] = None,
 ):
@@ -45,7 +44,7 @@ def illustrate(
         typer.Argument(..., help="Path to protein config file", exists=True, show_default=False),
     ],
     config: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Argument(..., help="Path to illustrate config file", show_default=False),
     ] = None,
 ):
@@ -76,8 +75,8 @@ def rotate(
     Orient protein and save it to a new PDB file
     """
 
-    protein = portein.ProteinConfig(protein, rotate=True, output_prefix=output_prefix)
-    print(f"Saved protein to {protein.pdb_file}")
+    protein_config = portein.ProteinConfig(protein, rotate=True, output_prefix=output_prefix)
+    print(f"Saved protein to {protein_config.pdb_file}")
 
 
 @app.command()
@@ -115,33 +114,27 @@ def secondary(
         ),
     ] = None,
     helix: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option("--helix", "-h", help="Path to helix config file", show_default=False),
     ] = None,
     sheet: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option("--sheet", "-s", help="Path to sheet config file", show_default=False),
     ] = None,
     turn: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option("--turn", "-t", help="Path to turn config file", show_default=False),
     ] = None,
     dpi: Annotated[int, typer.Option(help="DPI of image")] = 300,
-    keep_files: Annotated[
-        bool,
-        typer.Option(
-            help="Keep intermediate DSSP files",
-        ),
-    ] = False,
 ):
     """
     Plot secondary structure topology diagram
     """
-    protein = portein.ProteinConfig(
+    protein_config = portein.ProteinConfig(
         protein, rotate=not norotate, output_prefix=output_prefix, width=width, height=height
     )
     ss = portein.SecondaryStructure(
-        protein,
+        protein_config,
         portein.HelixConfig.from_yaml(helix),
         portein.SheetConfig.from_yaml(sheet),
         portein.TurnConfig.from_yaml(turn),
@@ -150,8 +143,6 @@ def secondary(
     ss.run()
     image_file = f"{ss.protein_config.output_prefix}_secondary_structure.png"
     plt.savefig(image_file, dpi=dpi, bbox_inches="tight")
-    if not keep_files:
-        ss.cleanup()
     print(f"Saved image to {image_file}")
 
 

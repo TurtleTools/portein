@@ -1,4 +1,3 @@
-import typing as ty
 from dataclasses import dataclass
 from pathlib import Path
 from subprocess import SubprocessError
@@ -80,13 +79,9 @@ class DsspApp(LocalApp):
         if "charge" not in categories:
             self._array.set_annotation("charge", np.zeros(self._array.array_length(), dtype=int))
         if "b_factor" not in categories:
-            self._array.set_annotation(
-                "b_factor", np.zeros(self._array.array_length(), dtype=float)
-            )
+            self._array.set_annotation("b_factor", np.zeros(self._array.array_length(), dtype=float))
         if "occupancy" not in categories:
-            self._array.set_annotation(
-                "occupancy", np.ones(self._array.array_length(), dtype=float)
-            )
+            self._array.set_annotation("occupancy", np.ones(self._array.array_length(), dtype=float))
         try:
             # The parameters have changed in version 4
             self._new_cli = get_version(bin_path)[0] >= 4
@@ -178,8 +173,8 @@ class SecondaryStructure:
     sheet_config: config.SheetConfig = None
     turn_config: config.TurnConfig = None
     dpi: int = 300
-    coords: ty.Optional[np.ndarray] = None
-    ss_elements: ty.Optional[ty.List[ty.Tuple[str, int, int]]] = None
+    coords: np.ndarray | None = None
+    ss_elements: list[tuple[str, int, int]] | None = None
 
     def __post_init__(self):
         if self.helix_config is None:
@@ -189,6 +184,7 @@ class SecondaryStructure:
         if self.turn_config is None:
             self.turn_config = config.TurnConfig()
 
+    @staticmethod
     def from_yaml(
         protein_config: Path,
         helix_config: Path,
@@ -221,9 +217,10 @@ class SecondaryStructure:
         structure = read_structure(self.protein_config.pdb_file)
         sse = DsspApp.annotate_sse(structure[~structure.hetero])
         self.coords = structure[(structure.atom_name == "CA") & ~structure.hetero].coord
-        assert (
-            len(self.coords) == len(sse)
-        ), f"Number of coordinates and secondary structure elements must be the same, got {len(self.coords)} and {len(sse)}"
+        assert len(self.coords) == len(sse), (
+            f"Number of coordinates and secondary structure elements must be the same, "
+            f"got {len(self.coords)} and {len(sse)}"
+        )
         self.ss_elements = get_ss_elements(sse)
         if ax is None:
             fig, ax = plt.subplots(
@@ -293,11 +290,11 @@ def make_helix_wave(config: config.HelixConfig, length):
     return patches
 
 
-def make_helix_cylinder(config: config.HelixConfig, length):
+def make_helix_cylinder(config: config.HelixConfig, length) -> list[m_patches.Patch]:
     # Origin is *center* of ellipse
-    origin = (config.cylinder_ellipse_length / 2, 0)
+    origin: tuple[float, float] = (config.cylinder_ellipse_length / 2, 0.0)
     # First ellipse
-    patches = [
+    patches: list[m_patches.Patch] = [
         m_patches.Ellipse(
             origin,
             config.cylinder_ellipse_length,

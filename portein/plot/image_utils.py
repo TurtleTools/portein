@@ -1,5 +1,3 @@
-import typing as ty
-
 import numpy as np
 from PIL import Image
 
@@ -16,7 +14,7 @@ def update_limits(sx, sy, ex, ey, min_x, min_y, max_x, max_y):
     return min_x, min_y, max_x, max_y
 
 
-def put_alpha(img: Image, transparency: float):
+def put_alpha(img: Image.Image, transparency: float):
     im2 = img.copy()
     im2.putalpha(int(255 * (1 - transparency)))
     img.paste(im2, img)
@@ -27,7 +25,7 @@ def alpha_blending(color, alpha: float):
     return tuple((1.0 - alpha) + np.array(color) * alpha)
 
 
-def find_size(points, width: ty.Optional[float] = None, height: ty.Optional[float] = None):
+def find_size(points, width: float | None = None, height: float | None = None):
     """
     Find figure size given coordinates and size of one dimension.
     Calculates height from width if height=None and width from height if width=None
