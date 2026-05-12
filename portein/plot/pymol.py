@@ -1,17 +1,32 @@
-from pathlib import Path
-from matplotlib import colors as m_colors
+import typing
 from dataclasses import dataclass
+from pathlib import Path
+
+import yaml
+from matplotlib import colors as m_colors
 from PIL import Image
+
 from portein import config
 from portein.plot import image_utils
-import typing
-import yaml
 
 try:
     from pymol import cmd, util
-except ImportError:
-    print("Warning: pymol not installed, cannot use Pymol class")
-    pass
+except ImportError as _pymol_import_error:
+    cmd = None
+    util = None
+    _PYMOL_IMPORT_ERROR = _pymol_import_error
+else:
+    _PYMOL_IMPORT_ERROR = None
+
+
+def _require_pymol():
+    if _PYMOL_IMPORT_ERROR is not None:
+        raise ImportError(
+            "PyMOL is required for portein.Pymol but is not installed. "
+            "Install it with:\n"
+            "    mamba install -c conda-forge pymol-open-source\n"
+            "(or `conda install -c conda-forge pymol-open-source`)"
+        ) from _PYMOL_IMPORT_ERROR
 
 
 @dataclass
@@ -38,6 +53,7 @@ class Pymol:
         return Pymol(protein, layers, buffer)
 
     def run(self, remove_intermediate_files=True):
+        _require_pymol()
         cmd.reinitialize()
         cmd.load(self.protein.pdb_file)
         self.set_pymol_settings()
