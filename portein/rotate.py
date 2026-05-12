@@ -1,7 +1,7 @@
 import numba as nb
 import numpy as np
-from biotite.structure import AtomArray
 from biotite import structure as bio_struct
+from biotite.structure import AtomArray
 
 
 @nb.njit

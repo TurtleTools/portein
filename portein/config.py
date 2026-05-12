@@ -1,22 +1,23 @@
-from dataclasses import dataclass
-from pathlib import Path
 import tempfile
 import typing
-
-from matplotlib.typing import ColorType
-from portein.plot import image_utils
-from matplotlib import colormaps
+from dataclasses import dataclass
 from itertools import groupby
 from operator import itemgetter
-from matplotlib import colors as m_colors
-from portein.rotate import rotate_protein
-import yaml
-import biotite.structure.io as bio_io
-from biotite.structure.io import pdb, pdbx
+from pathlib import Path
+from tempfile import gettempdir
+
 import biotite.structure as bio_struct
+import biotite.structure.io as bio_io
+import yaml
 from biotite.database import rcsb
 from biotite.structure import AtomArray
-from tempfile import gettempdir
+from biotite.structure.io import pdb, pdbx
+from matplotlib import colormaps
+from matplotlib import colors as m_colors
+from matplotlib.typing import ColorType
+
+from portein.plot import image_utils
+from portein.rotate import rotate_protein
 
 
 def read_structure(path: typing.Union[str, Path]) -> AtomArray:
@@ -25,17 +26,17 @@ def read_structure(path: typing.Union[str, Path]) -> AtomArray:
     elif Path(path).suffix == ".cif":
         try:
             return pdbx.get_structure(pdbx.CIFFile.read(path), model=1, extra_fields=["b_factor"])
-        except Exception as e:
+        except Exception:
             return pdbx.get_structure(pdbx.CIFFile.read(path), model=1)
     else:
         try:
             cif_file_path = rcsb.fetch(path, "cif", gettempdir())
             cif_file = pdbx.CIFFile.read(cif_file_path)
             return pdbx.get_structure(cif_file, model=1)
-        except Exception as e:
+        except Exception:
             try:
                 return pdb.PDBFile.read(path).get_structure(model=1, extra_fields=["b_factor"])
-            except Exception as e:
+            except Exception:
                 try:
                     return bio_struct.load_structure(path, model=1)
                 except Exception as e:
@@ -182,9 +183,7 @@ class ProteinConfig:
     """prefix for output files. If None uses the PDB file name"""
     chain_colormap: typing.Union[str, typing.Dict[str, ColorType]] = "Set3"
     """colormap to use for coloring chains, either a matplotlib colormap or a dictionary of {chain: color}"""
-    highlight_residues: typing.Dict[str, typing.Dict[ColorType, typing.List[int]]] = (
-        None
-    )
+    highlight_residues: typing.Dict[str, typing.Dict[ColorType, typing.List[int]]] = None
     """dictionary of {chain: {color: [residue numbers]}}, use None to set the color to the chain color"""
     width: int = 1000
     """width of image (in pixels)"""
@@ -375,7 +374,7 @@ class IllustrateConfig:
     """padding around molecule (width, height)"""
     contour_outline_min: float = 3.0
     contour_outline_max: float = 10.0
-    """thresholds for gray to black. typically values from about 3.0-20.0, 
+    """thresholds for gray to black. typically values from about 3.0-20.0,
     best values for typical atomic illustrations: 3.0, 10.0"""
     contour_ikernel: int = 4
     """kernel for derivative calculation (1,2,3,4 smoothest=4)"""

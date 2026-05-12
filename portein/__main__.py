@@ -1,10 +1,12 @@
-import portein
+import warnings
+from pathlib import Path
+from typing import Optional
+
 import matplotlib.pyplot as plt
 import typer
-from pathlib import Path
-import warnings
 from typing_extensions import Annotated
-from typing import Optional
+
+import portein
 
 warnings.filterwarnings("ignore")
 portein.compile_numba_functions()
@@ -17,9 +19,7 @@ app = typer.Typer(name="portein")
 def pymol(
     protein: Annotated[
         Path,
-        typer.Argument(
-            ..., help="Path to protein config file", exists=True, show_default=False
-        ),
+        typer.Argument(..., help="Path to protein config file", exists=True, show_default=False),
     ],
     config: Annotated[
         Optional[Path],
@@ -27,9 +27,7 @@ def pymol(
     ] = None,
     buffer: Annotated[
         Optional[float],
-        typer.Option(
-            help="Buffer around the molecule in Angstroms", show_default=False
-        ),
+        typer.Option(help="Buffer around the molecule in Angstroms", show_default=False),
     ] = None,
 ):
     """
@@ -44,9 +42,7 @@ def pymol(
 def illustrate(
     protein: Annotated[
         Path,
-        typer.Argument(
-            ..., help="Path to protein config file", exists=True, show_default=False
-        ),
+        typer.Argument(..., help="Path to protein config file", exists=True, show_default=False),
     ],
     config: Annotated[
         Optional[Path],
@@ -65,9 +61,7 @@ def illustrate(
 def rotate(
     protein: Annotated[
         str,
-        typer.Argument(
-            ..., help="PDB ID or path to PDB file", exists=True, show_default=False
-        ),
+        typer.Argument(..., help="PDB ID or path to PDB file", exists=True, show_default=False),
     ],
     output_prefix: Annotated[
         str,
@@ -90,9 +84,7 @@ def rotate(
 def secondary(
     protein: Annotated[
         str,
-        typer.Argument(
-            ..., help="PDB ID or path to PDB file", exists=True, show_default=False
-        ),
+        typer.Argument(..., help="PDB ID or path to PDB file", exists=True, show_default=False),
     ],
     norotate: Annotated[
         bool,
@@ -124,21 +116,15 @@ def secondary(
     ] = None,
     helix: Annotated[
         Optional[Path],
-        typer.Option(
-            "--helix", "-h", help="Path to helix config file", show_default=False
-        ),
+        typer.Option("--helix", "-h", help="Path to helix config file", show_default=False),
     ] = None,
     sheet: Annotated[
         Optional[Path],
-        typer.Option(
-            "--sheet", "-s", help="Path to sheet config file", show_default=False
-        ),
+        typer.Option("--sheet", "-s", help="Path to sheet config file", show_default=False),
     ] = None,
     turn: Annotated[
         Optional[Path],
-        typer.Option(
-            "--turn", "-t", help="Path to turn config file", show_default=False
-        ),
+        typer.Option("--turn", "-t", help="Path to turn config file", show_default=False),
     ] = None,
     dpi: Annotated[int, typer.Option(help="DPI of image")] = 300,
     keep_files: Annotated[
@@ -151,12 +137,16 @@ def secondary(
     """
     Plot secondary structure topology diagram
     """
-    protein = portein.ProteinConfig(protein, rotate=not norotate, output_prefix=output_prefix, width=width, height=height)
-    ss = portein.SecondaryStructure(protein, 
-                                    portein.HelixConfig.from_yaml(helix),
-                                    portein.SheetConfig.from_yaml(sheet),
-                                    portein.TurnConfig.from_yaml(turn),
-                                    dpi=dpi)
+    protein = portein.ProteinConfig(
+        protein, rotate=not norotate, output_prefix=output_prefix, width=width, height=height
+    )
+    ss = portein.SecondaryStructure(
+        protein,
+        portein.HelixConfig.from_yaml(helix),
+        portein.SheetConfig.from_yaml(sheet),
+        portein.TurnConfig.from_yaml(turn),
+        dpi=dpi,
+    )
     ss.run()
     image_file = f"{ss.protein_config.output_prefix}_secondary_structure.png"
     plt.savefig(image_file, dpi=dpi, bbox_inches="tight")

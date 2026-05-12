@@ -1,19 +1,21 @@
-from pathlib import Path
-import matplotlib.pyplot as plt
-import numpy as np
-from matplotlib import patches as m_patches
-from matplotlib import transforms as m_transforms
 import typing as ty
 from dataclasses import dataclass
-from portein import config
-from portein.plot import image_utils
-from portein.config import read_structure
+from pathlib import Path
 from subprocess import SubprocessError
 from tempfile import NamedTemporaryFile
+
+import matplotlib.pyplot as plt
+import numpy as np
 from biotite.application.application import AppState, requires_state
 from biotite.application.localapp import LocalApp, cleanup_tempfile, get_version
 from biotite.structure.io.pdb import PDBFile
 from biotite.structure.io.pdb.convert import set_structure
+from matplotlib import patches as m_patches
+from matplotlib import transforms as m_transforms
+
+from portein import config
+from portein.config import read_structure
+from portein.plot import image_utils
 
 SS_DICT = {
     "H": "H",
@@ -76,9 +78,7 @@ class DsspApp(LocalApp):
         self._array = atom_array.copy()
         categories = self._array.get_annotation_categories()
         if "charge" not in categories:
-            self._array.set_annotation(
-                "charge", np.zeros(self._array.array_length(), dtype=int)
-            )
+            self._array.set_annotation("charge", np.zeros(self._array.array_length(), dtype=int))
         if "b_factor" not in categories:
             self._array.set_annotation(
                 "b_factor", np.zeros(self._array.array_length(), dtype=float)
@@ -119,9 +119,7 @@ class DsspApp(LocalApp):
         if sse_start is None:
             raise ValueError("DSSP file does not contain SSE records")
         # Remove "!" for missing residues
-        lines = [
-            line for line in lines[sse_start:] if len(line) != 0 and line[13] != "!"
-        ]
+        lines = [line for line in lines[sse_start:] if len(line) != 0 and line[13] != "!"]
         self._sse = np.zeros(len(lines), dtype="U1")
         # Parse file for SSE letters
         for i, line in enumerate(lines):
@@ -223,9 +221,9 @@ class SecondaryStructure:
         structure = read_structure(self.protein_config.pdb_file)
         sse = DsspApp.annotate_sse(structure[~structure.hetero])
         self.coords = structure[(structure.atom_name == "CA") & ~structure.hetero].coord
-        assert len(self.coords) == len(sse), (
-            f"Number of coordinates and secondary structure elements must be the same, got {len(self.coords)} and {len(sse)}"
-        )
+        assert (
+            len(self.coords) == len(sse)
+        ), f"Number of coordinates and secondary structure elements must be the same, got {len(self.coords)} and {len(sse)}"
         self.ss_elements = get_ss_elements(sse)
         if ax is None:
             fig, ax = plt.subplots(

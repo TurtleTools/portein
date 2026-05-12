@@ -1,3 +1,94 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=64", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "portein"
+version = "0.0.1"
+description = "2D portraits of 3D protein structures"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Janani Durairaj"},
+]
+requires-python = ">=3.10"
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX",
+    "Operating System :: Unix",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = [
+    "numpy>=1.24",
+    "numba>=0.58",
+    "biotite>=0.40",
+    "matplotlib>=3.8",
+    "typer>=0.9",
+    "Pillow>=10.0",
+    "pyyaml>=6.0",
+    "typing-extensions>=4.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+]
+
+[project.urls]
+Source = "https://github.com/TurtleTools/portein"
+Tracker = "https://github.com/TurtleTools/portein/issues"
+
+[project.scripts]
+portein = "portein.__main__:app"
+
+[tool.setuptools.packages.find]
+include = ["portein*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+# Start permissive: pyflakes (F) + a subset of pycodestyle (E) + isort (I).
+# Add more rule sets as the codebase matures.
+select = ["E", "F", "I", "W"]
+ignore = [
+    "E501",  # line-too-long — long string literals and yaml-block writers
+    "E741",  # ambiguous variable names (`l`, `i`, `O`) — present in math code
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E402"]  # matplotlib.use("Agg") must precede pyplot import
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+warn_unused_ignores = true
+# Be permissive on existing code; tighten later. The `misc` disable covers
+# from_yaml() methods that act as classmethods without the decorator (pre-existing).
+disable_error_code = [
+    "assignment",
+    "attr-defined",
+    "union-attr",
+    "var-annotated",
+    "valid-type",
+    "arg-type",
+    "misc",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = [
+    "pymol: tests that require pymol-open-source",
+    "dssp: tests that require mkdssp",
+    "network: tests that require network access (RCSB fetch)",
+]

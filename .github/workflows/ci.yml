@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: test (${{ matrix.os }}, py${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -el {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up micromamba
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: environment.yml
+          environment-name: portein
+          create-args: >-
+            python=${{ matrix.python-version }}
+          cache-environment: true
+          cache-downloads: true
+
+      - name: Show environment
+        run: |
+          mamba list
+          python -c "import portein; print('portein', portein.__version__)"
+          python -c "import pymol; print('pymol OK')"
+          which mkdssp && mkdssp --version || true
+
+      - name: Run tests
+        run: pytest -v --cov=portein --cov-report=term-missing

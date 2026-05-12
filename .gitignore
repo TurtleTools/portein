@@ -1,3 +1,8 @@
 __pycache__
 *.egg-info
 *.pnm
+.pytest_cache/
+.coverage
+htmlcov/
+build/
+dist/

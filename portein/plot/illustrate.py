@@ -1,8 +1,10 @@
-from dataclasses import dataclass
-from matplotlib import colors as m_colors
-from pathlib import Path
 import subprocess
+from dataclasses import dataclass
+from pathlib import Path
+
+from matplotlib import colors as m_colors
 from PIL import Image
+
 from portein import config
 from portein.plot import image_utils
 
@@ -47,9 +49,7 @@ ATOM  H--------- 0,9999, 0.5,0.5,0.5, 0.0
             for start, end in residue_ranges:
                 self.write_residue_range(file, chain, start, end, color, color)
 
-    def write_residue_range(
-        self, file, chain, start, end, calpha_color, sidechain_color
-    ):
+    def write_residue_range(self, file, chain, start, end, calpha_color, sidechain_color):
         file.write(
             f"ATOM  -C-------{chain} {start},{end+1}, {calpha_color[0]:.1f},{calpha_color[1]:.1f},{calpha_color[2]:.1f}, {self.illustrate_config.carbon_radius}\n"
         )
@@ -66,9 +66,7 @@ ATOM  H--------- 0,9999, 0.5,0.5,0.5, 0.0
             sidechain_color = image_utils.alpha_blending(
                 calpha_color, self.illustrate_config.sidechain_transparency
             )
-            self.write_residue_range(
-                file, chain, 0, 9999, calpha_color, sidechain_color
-            )
+            self.write_residue_range(file, chain, 0, 9999, calpha_color, sidechain_color)
 
     def write_end_and_transformations(self, file):
         file.write(

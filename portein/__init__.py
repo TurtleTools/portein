@@ -1,26 +1,25 @@
 __version__ = "0.0.1"
 
-from portein import plot, rotate, config
+from portein import config, plot, rotate
 from portein.config import (
     HelixConfig,
-    SheetConfig,
-    TurnConfig,
-    PymolConfig,
     IllustrateConfig,
     ProteinConfig,
+    PymolConfig,
+    SheetConfig,
+    TurnConfig,
     read_structure,
 )
-from portein.plot.image_utils import find_size
-from portein.plot.secondary_structure import SecondaryStructure
-from portein.plot.pymol import Pymol
 from portein.plot.illustrate import Illustrate
+from portein.plot.image_utils import find_size
+from portein.plot.pymol import Pymol
+from portein.plot.secondary_structure import SecondaryStructure
 from portein.rotate import (
-    get_best_transformation,
     apply_transformation,
     compile_numba_functions,
+    get_best_transformation,
     rotate_protein,
 )
-
 
 __all__ = [
     # portein

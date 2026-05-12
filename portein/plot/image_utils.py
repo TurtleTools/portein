@@ -1,6 +1,7 @@
+import typing as ty
+
 import numpy as np
 from PIL import Image
-import typing as ty
 
 
 def update_limits(sx, sy, ex, ey, min_x, min_y, max_x, max_y):
@@ -26,9 +27,7 @@ def alpha_blending(color, alpha: float):
     return tuple((1.0 - alpha) + np.array(color) * alpha)
 
 
-def find_size(
-    points, width: ty.Optional[float] = None, height: ty.Optional[float] = None
-):
+def find_size(points, width: ty.Optional[float] = None, height: ty.Optional[float] = None):
     """
     Find figure size given coordinates and size of one dimension.
     Calculates height from width if height=None and width from height if width=None
@@ -43,9 +42,7 @@ def find_size(
     -------
     (width, height)
     """
-    assert width is not None or height is not None, (
-        "Either one of height or width must be set"
-    )
+    assert width is not None or height is not None, "Either one of height or width must be set"
     if height is not None and width is not None:
         return width, height
     min_x, max_x = np.min(points[:, 0]), np.max(points[:, 0])

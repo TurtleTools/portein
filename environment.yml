@@ -1,0 +1,31 @@
+name: portein
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.10
+  # Core scientific stack (faster to resolve from conda-forge than pip)
+  - numpy>=1.24
+  - numba>=0.58
+  - matplotlib>=3.8
+  - pillow>=10.0
+  - pyyaml>=6.0
+  - typing-extensions>=4.0
+  # Bioinformatics
+  - biotite>=0.40
+  # PyMOL renderer (required for `portein pymol` / portein.Pymol)
+  - pymol-open-source
+  # DSSP (required for `portein secondary` / portein.SecondaryStructure)
+  - dssp
+  # CLI
+  - typer>=0.9
+  # Dev / test / lint
+  - pip
+  - pytest>=7.0
+  - pytest-cov>=4.0
+  - pre-commit>=3.5
+  - ruff>=0.7
+  - mypy>=1.10
+  - jupyter
+  - nbconvert
+  - pip:
+      - -e .
