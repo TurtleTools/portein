@@ -1,6 +1,8 @@
 __version__ = "0.0.1"
 
-from portein import config, plot, rotate
+from portein import color, compare, config, image, interactions, plot, rotate, sequence
+from portein.color import PLDDT_RANGES, by_plddt
+from portein.compare import superimpose_by_alignment
 from portein.config import (
     HelixConfig,
     IllustrateConfig,
@@ -9,6 +11,14 @@ from portein.config import (
     SheetConfig,
     TurnConfig,
     read_structure,
+)
+from portein.image import crop_to_content
+from portein.interactions import (
+    HBond,
+    InteractionSet,
+    PiCation,
+    PiStacking,
+    SaltBridge,
 )
 from portein.plot.illustrate import Illustrate
 from portein.plot.image_utils import find_size
@@ -20,6 +30,7 @@ from portein.rotate import (
     get_best_transformation,
     rotate_protein,
 )
+from portein.sequence import AlignmentPlotter
 
 __all__ = [
     # portein
@@ -32,6 +43,10 @@ __all__ = [
     "plot",
     "rotate",
     "config",
+    "color",
+    "compare",
+    "image",
+    "sequence",
     "ProteinConfig",
     # secondary structure related
     "SecondaryStructure",
@@ -44,4 +59,17 @@ __all__ = [
     # illustrate related
     "Illustrate",
     "IllustrateConfig",
+    # new helpers
+    "crop_to_content",
+    "by_plddt",
+    "PLDDT_RANGES",
+    "superimpose_by_alignment",
+    "AlignmentPlotter",
+    # interactions
+    "InteractionSet",
+    "HBond",
+    "SaltBridge",
+    "PiCation",
+    "PiStacking",
+    "interactions",
 ]

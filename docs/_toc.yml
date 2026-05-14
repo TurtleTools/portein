@@ -1,0 +1,14 @@
+# Jupyter Book table of contents — see https://jupyterbook.org/en/stable/structure/toc.html
+format: jb-book
+root: index
+parts:
+  - caption: Tutorials
+    chapters:
+      - file: tutorials/01_rotation
+      - file: tutorials/02_pymol_layers
+      - file: tutorials/03_secondary_structure
+      - file: tutorials/04_compare_structures
+      - file: tutorials/05_interactions
+  - caption: Reference
+    chapters:
+      - file: api/reference

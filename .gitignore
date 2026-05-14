@@ -6,3 +6,9 @@ __pycache__
 htmlcov/
 build/
 dist/
+
+# Jupyter Book / Sphinx build artifacts
+docs/_build/
+docs/_gallery/
+docs/api/generated/
+docs/sg_execution_times.rst
