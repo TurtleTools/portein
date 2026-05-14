@@ -27,5 +27,13 @@ dependencies:
   - mypy>=1.10
   - jupyter
   - nbconvert
+  # Docs — pin to Jupyter Book v1 (Sphinx-based); v2 uses a different engine
+  # (mystmd) with a smaller plugin ecosystem and no sphinx-gallery support.
+  - jupyter-book>=1.0,<2.0
+  - sphinx-book-theme>=1.1
+  - myst-nb>=1.1
+  - sphinx-gallery>=0.16
+  - sphinxcontrib-bibtex>=2.6
+  - sphinx-autodoc-typehints>=2.0
   - pip:
       - -e .

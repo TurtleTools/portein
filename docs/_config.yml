@@ -1,0 +1,61 @@
+# Jupyter Book configuration — see https://jupyterbook.org/en/stable/customize/config.html
+title: Portein
+author: Jay
+copyright: "2024"
+logo: ""
+
+# Force re-execution of notebooks on each build.
+execute:
+  execute_notebooks: cache
+  timeout: 600
+  allow_errors: false
+
+# LaTeX/PDF output
+latex:
+  latex_documents:
+    targetname: portein.tex
+
+# BibTeX citations
+bibtex_bibfiles:
+  - references.bib
+
+# HTML output
+html:
+  use_repository_button: true
+  use_issues_button: true
+  use_edit_page_button: true
+  home_page_in_navbar: false
+
+repository:
+  url: https://github.com/TurtleTools/portein
+  branch: main
+  path_to_book: docs
+
+# Sphinx-level configuration
+sphinx:
+  extra_extensions:
+    - sphinx.ext.autodoc
+    - sphinx.ext.autosummary
+    - sphinx.ext.intersphinx
+    - sphinx.ext.napoleon
+    - sphinx_gallery.gen_gallery
+  config:
+    # API autosummary
+    autosummary_generate: true
+    autodoc_typehints: description
+    napoleon_numpy_docstring: true
+    # Cross-link external libraries
+    intersphinx_mapping:
+      python: ["https://docs.python.org/3", null]
+      numpy: ["https://numpy.org/doc/stable", null]
+      matplotlib: ["https://matplotlib.org/stable", null]
+      biotite: ["https://www.biotite-python.org/latest", null]
+    # sphinx-gallery — auto-thumbnailed example grid
+    sphinx_gallery_conf:
+      examples_dirs: ["gallery"]
+      gallery_dirs: ["_gallery"]
+      filename_pattern: "/plot_"
+      remove_config_comments: true
+      plot_gallery: "True"
+      thumbnail_size: [400, 280]
+      download_all_examples: false

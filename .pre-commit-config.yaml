@@ -5,7 +5,8 @@ exclude: |
   (?x)^(
     examples/.*\.pdb |
     examples/.*\.cif |
-    examples/README_files/.*
+    examples/README_files/.* |
+    docs/_data/.*
   )$
 
 repos:
