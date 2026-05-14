@@ -34,6 +34,7 @@ jobs:
           init-shell: bash
           cache-environment: true
           cache-downloads: true
+          post-cleanup: none
 
       - name: Show environment
         run: |
