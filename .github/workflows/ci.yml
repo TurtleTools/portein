@@ -25,12 +25,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up micromamba
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: environment.yml
           environment-name: portein
           create-args: >-
             python=${{ matrix.python-version }}
+          init-shell: bash
           cache-environment: true
           cache-downloads: true
 
