@@ -192,6 +192,11 @@ class ProteinConfig:
     """dictionary of {chain: color}"""
     chain_to_residue_range_color: dict[str, dict[tuple[int, int], ColorType]] = None
     """dictionary of {chain: {residue_range: color}}"""
+    chain_transparency: dict[str, float] = None
+    """{chain: transparency} for depth-aware per-chain transparency in PyMOL renders.
+    0.0 is opaque, 1.0 is invisible. Applied via PyMOL's cartoon_transparency
+    and transparency settings (per-selection), so overlapping structures
+    composite correctly per-pixel rather than as flat 2D layers."""
 
     def __post_init__(self):
         self.finish()

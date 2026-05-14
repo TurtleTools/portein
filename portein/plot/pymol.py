@@ -39,6 +39,18 @@ class Pymol:
     """zoom to selection"""
     center_to: str = None
     """center to selection"""
+    combine: bool = False
+    """If False (default), render the portein way: each layer is its own
+    ``cmd.ray()`` pass, and the PNGs are alpha-composited in PIL. Layer
+    transparency is uniform 2D alpha across each layer's image; layers
+    cannot depth-interleave with each other.
+    If True, render the PyMOL way: set up all layers in a single scene
+    and ``cmd.ray()`` once. PyMOL's z-buffer interleaves overlapping
+    geometries per-pixel. Per-layer ``transparency`` then becomes a
+    PyMOL ``cartoon_transparency`` / ``transparency`` / ``stick_transparency``
+    setting on each layer's selection (depth-aware) instead of a flat
+    PIL alpha. Choose this when overlapping structures or representations
+    should weave through each other rather than stack as flat decals."""
 
     @staticmethod
     def from_yaml(protein_config: Path, pymol_config: Path, buffer: float = None):
@@ -57,10 +69,45 @@ class Pymol:
         cmd.reinitialize()
         cmd.load(self.protein.pdb_file)
         self.set_pymol_settings()
-        for index, layer in enumerate(self.layers):
-            self.draw(layer, index)
-        image_file = self.layer_images(remove_intermediate_files)
+        if self.combine:
+            image_file = self._draw_combined()
+        else:
+            for index, layer in enumerate(self.layers):
+                self.draw(layer, index)
+            image_file = self.layer_images(remove_intermediate_files)
         cmd.reinitialize()
+        return image_file
+
+    _REP_TRANSPARENCY_SETTING = {
+        "cartoon": "cartoon_transparency",
+        "surface": "transparency",
+        "sticks": "stick_transparency",
+        "spheres": "sphere_transparency",
+        "ribbon": "ribbon_transparency",
+    }
+
+    def _draw_combined(self) -> str:
+        """Set up all layers in one PyMOL scene and ray-trace once.
+
+        Per-layer ``transparency`` becomes a PyMOL per-selection setting
+        matching the layer's representation (``cartoon_transparency``,
+        ``transparency`` for surface, ``stick_transparency``, etc.) so
+        transparencies are depth-aware and don't bleed across representations.
+        Later layers' settings on overlapping atoms override earlier ones —
+        order the layers from most general to most specific.
+        """
+        cmd.hide("everything")
+        for layer in self.layers:
+            self.change_settings(layer.pymol_settings)
+            self.show(layer=layer)
+            if layer.selection != "highlight":
+                setting = self._REP_TRANSPARENCY_SETTING.get(layer.representation)
+                if setting is not None:
+                    cmd.set(setting, layer.transparency, layer.selection)
+        dpi = self.layers[0].dpi if self.layers else 300
+        cmd.ray(self.protein.width, self.protein.height)
+        image_file = f"{self.protein.output_prefix}_pymol.png"
+        cmd.png(image_file, width=self.protein.width, height=self.protein.height, dpi=dpi)
         return image_file
 
     def set_pymol_settings(self):
@@ -75,6 +122,31 @@ class Pymol:
             cmd.zoom(buffer=self.buffer)
         for chain, color in self.protein.chain_to_color.items():
             cmd.color(f"0x{m_colors.to_hex(color).lower()[1:]}", f"chain {chain}")
+        if self.protein.chain_transparency:
+            for chain, alpha in self.protein.chain_transparency.items():
+                cmd.set("cartoon_transparency", alpha, f"chain {chain}")
+                cmd.set("transparency", alpha, f"chain {chain}")
+                cmd.set("stick_transparency", alpha, f"chain {chain}")
+        # Apply per-residue highlight colors at scene setup so they survive
+        # subsequent layer renders. Without this, only layers using
+        # selection="highlight" (which calls show_highlight) carry the custom
+        # colors — a single-pass render that shows multiple chains then
+        # can't render highlight residues with their assigned colors and
+        # have the structures depth-interleave correctly.
+        self._apply_highlight_colors()
+
+    def _apply_highlight_colors(self):
+        """Create named selections for highlight residues and apply their colors.
+
+        Does not show anything — visibility is handled per-layer.
+        """
+        for chain, colors in self.protein.highlight_residues.items():
+            for color, residues in colors.items():
+                effective_color = color if color is not None else self.protein.chain_to_color[chain]
+                color_hex = m_colors.to_hex(effective_color).lower()[1:]
+                sel_name = f"highlight_{chain}_{color_hex}"
+                cmd.select(sel_name, f"chain {chain} and resi {'+'.join(str(x) for x in residues)}")
+                cmd.color(f"0x{color_hex}", sel_name)
 
     def draw(self, layer: config.PymolConfig, index: int):
         self.change_settings(layer.pymol_settings)
@@ -118,19 +190,20 @@ class Pymol:
             util.cnc("rep sticks")
 
     def show_highlight(self, layer: config.PymolConfig):
+        """Show all named highlight selections in this layer.
+
+        Selection names and per-residue colors are pre-applied by
+        ``_apply_highlight_colors`` during scene setup; this method only
+        toggles visibility and applies any per-layer color override.
+        """
         for chain, colors in self.protein.highlight_residues.items():
-            for color, residues in colors.items():
-                if color is None:
-                    color = self.protein.chain_to_color[chain]
+            for color, _ in colors.items():
+                effective_color = color if color is not None else self.protein.chain_to_color[chain]
+                color_hex = m_colors.to_hex(effective_color).lower()[1:]
+                sel_name = f"highlight_{chain}_{color_hex}"
+                cmd.show(layer.representation, sel_name)
                 if layer.color is not None:
-                    color = layer.color
-                color = m_colors.to_hex(color).lower()[1:]
-                cmd.select(
-                    f"highlight_{chain}_{color}",
-                    f"chain {chain} and resi {'+'.join(str(x) for x in residues)}",
-                )
-                cmd.show(layer.representation, f"highlight_{chain}_{color}")
-                cmd.color(f"0x{color}", f"highlight_{chain}_{color}")
+                    cmd.color(f"0x{m_colors.to_hex(layer.color).lower()[1:]}", sel_name)
 
     def layer_images(self, remove_intermediate_files=True):
         pngs = []

@@ -36,7 +36,7 @@ jobs:
 
       - name: Show environment
         run: |
-          mamba list
+          micromamba list
           python -c "import portein; print('portein', portein.__version__)"
           python -c "import pymol; print('pymol OK')"
           which mkdssp && mkdssp --version || true
