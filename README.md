@@ -1,11 +1,12 @@
 # Portein
+
 ## Portraits of Proteins
 
 Portein plots 3D proteins according to their best 2D projection (best = greatest visible area), and composes PyMOL ray-traced renders, secondary-structure topology diagrams, and sequence visualizations into publication-quality figures.
 
 [![Documentation](https://img.shields.io/badge/docs-jupyter--book-blue)](https://turtletools.github.io/portein/)
 
-➡️  **Read the docs** at <https://turtletools.github.io/portein/> for tutorials and a gallery of advanced usage.
+➡️  **Read the docs** at <https://turtletools.github.io/portein/> for usage examples.
 
 ## Installation
 
@@ -52,14 +53,3 @@ Then add the renderers if/when you need them:
 ```sh
 mamba install -c conda-forge pymol-open-source dssp
 ```
-
-## Quick taste
-
-```python
-import portein
-
-pdb = portein.read_structure("7lc2")
-oriented = portein.rotate_protein(pdb)
-```
-
-See the [rotation tutorial](https://turtletools.github.io/portein/tutorials/01_rotation.html), the [PyMOL layers tutorial](https://turtletools.github.io/portein/tutorials/02_pymol_layers.html), the [secondary-structure tutorial](https://turtletools.github.io/portein/tutorials/03_secondary_structure.html), and the [gallery](https://turtletools.github.io/portein/_gallery/index.html) for full examples.

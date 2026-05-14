@@ -7,9 +7,8 @@ parts:
       - file: tutorials/01_rotation
       - file: tutorials/02_pymol_layers
       - file: tutorials/03_secondary_structure
-  - caption: Gallery
-    chapters:
-      - file: _gallery/index
+      - file: tutorials/04_compare_structures
+      - file: tutorials/05_interactions
   - caption: Reference
     chapters:
       - file: api/reference

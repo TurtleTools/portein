@@ -12,6 +12,8 @@ dependencies:
   - typing-extensions>=4.0
   # Bioinformatics
   - biotite>=0.40
+  # peppr — SMARTS-based protein-ligand interaction detection
+  - peppr>=0.13
   # PyMOL renderer (required for `portein pymol` / portein.Pymol)
   - pymol-open-source
   # DSSP (required for `portein secondary` / portein.SecondaryStructure)
@@ -27,12 +29,10 @@ dependencies:
   - mypy>=1.10
   - jupyter
   - nbconvert
-  # Docs — pin to Jupyter Book v1 (Sphinx-based); v2 uses a different engine
-  # (mystmd) with a smaller plugin ecosystem and no sphinx-gallery support.
+  # Docs — pin to Jupyter Book v1 (Sphinx-based)
   - jupyter-book>=1.0,<2.0
   - sphinx-book-theme>=1.1
   - myst-nb>=1.1
-  - sphinx-gallery>=0.16
   - sphinxcontrib-bibtex>=2.6
   - sphinx-autodoc-typehints>=2.0
   - pip:

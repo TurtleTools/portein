@@ -38,7 +38,6 @@ sphinx:
     - sphinx.ext.autosummary
     - sphinx.ext.intersphinx
     - sphinx.ext.napoleon
-    - sphinx_gallery.gen_gallery
   config:
     # API autosummary
     autosummary_generate: true
@@ -50,12 +49,4 @@ sphinx:
       numpy: ["https://numpy.org/doc/stable", null]
       matplotlib: ["https://matplotlib.org/stable", null]
       biotite: ["https://www.biotite-python.org/latest", null]
-    # sphinx-gallery — auto-thumbnailed example grid
-    sphinx_gallery_conf:
-      examples_dirs: ["gallery"]
-      gallery_dirs: ["_gallery"]
-      filename_pattern: "/plot_"
-      remove_config_comments: true
-      plot_gallery: "True"
-      thumbnail_size: [400, 280]
-      download_all_examples: false
+      peppr: ["https://peppr.proximabio.com", null]

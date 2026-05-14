@@ -26,7 +26,7 @@ from pathlib import Path
 import yaml
 from biotite import structure as struct
 from biotite.structure import io as bio
-from IPython.display import Image
+from PIL import Image
 
 import portein
 ```
@@ -61,7 +61,7 @@ pymol = portein.Pymol(
     layers=[portein.PymolConfig(representation="cartoon", pymol_settings=pymol_settings)],
 )
 image_file = pymol.run()
-Image(image_file)
+portein.crop_to_content(Image.open(image_file))
 ```
 
 ## Four-layer composite
@@ -98,7 +98,7 @@ layers = [
 ]
 pymol = portein.Pymol(protein=protein_config, layers=layers, buffer=10)
 image_file = pymol.run()
-Image(image_file)
+portein.crop_to_content(Image.open(image_file))
 ```
 
 ## Zoom on a ligand pocket
@@ -134,18 +134,20 @@ protein_config = portein.ProteinConfig(
 layers = [
     [
         portein.PymolConfig(representation="surface", pymol_settings=pymol_settings, transparency=0.3),
-        portein.PymolConfig(representation="cartoon", pymol_settings=pymol_settings),
-        portein.PymolConfig(
-            representation="sticks",
-            pymol_settings=pymol_settings,
-            selection="(chain A and resn GNP)",
-            color="green",
-        ),
+        [
+            portein.PymolConfig(representation="cartoon", pymol_settings=pymol_settings),
+            portein.PymolConfig(
+                representation="sticks",
+                pymol_settings=pymol_settings,
+                selection="(chain A and resn GNP)",
+                color="green",
+            ),
+        ],
     ],
 ]
 pymol = portein.Pymol(protein=protein_config, layers=layers)
 image_file = pymol.run()
-Image(image_file)
+portein.crop_to_content(Image.open(image_file))
 ```
 
 ## Layer compositing
@@ -159,8 +161,6 @@ Each entry in `layers` is either a bare `PymolConfig` or a *nested list* of `Pym
 Example:
 
 ```{code-cell} ipython3
-from IPython.display import Image as IpyImage, display
-
 protein_config = portein.ProteinConfig(
     pdb_file="../_data/7lc2.pdb",
     rotate=True,
@@ -172,7 +172,7 @@ protein_config = portein.ProteinConfig(
 
 ```{code-cell} ipython3
 # Two bare layers — each is its own ray-trace, then PIL-composited.
-# The cartoon PNG sits entirely on top of the translucent surface PNG.
+# The cartoon PNG renders on top of the translucent surface PNG.
 protein_config.output_prefix = str(output_dir / "decals")
 decals_image = portein.Pymol(
     protein=protein_config,
@@ -181,13 +181,13 @@ decals_image = portein.Pymol(
         portein.PymolConfig(representation="cartoon", pymol_settings=pymol_settings),
     ],
 ).run()
-display(IpyImage(decals_image))
+portein.crop_to_content(Image.open(decals_image))
 ```
 
 ```{code-cell} ipython3
 # One nested-list group — both layers share the same ray-trace.
 # The translucent surface and the cartoon share the z-buffer: the cartoon
-# appears "behind frosted glass" wherever the surface is in front, and
+# appears behind wherever the surface is in front, and
 # unmuted where the cartoon protrudes.
 protein_config.output_prefix = str(output_dir / "grouped")
 grouped_image = portein.Pymol(
@@ -199,7 +199,7 @@ grouped_image = portein.Pymol(
         ],
     ],
 ).run()
-display(IpyImage(grouped_image))
+portein.crop_to_content(Image.open(grouped_image))
 ```
 
 When to use which:
