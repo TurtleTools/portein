@@ -34,20 +34,21 @@ def test_pymol_renders_image(example_pdb_path, tmp_path):
 
 
 @pytest.mark.pymol
-def test_pymol_combined_mode_renders_image(example_pdb_path, tmp_path):
-    """combine=True takes a different render path — one ray-trace instead of N."""
+def test_pymol_nested_layer_group_renders_image(example_pdb_path, tmp_path):
+    """A nested list inside `layers` triggers a single shared ray-trace."""
     protein = portein.ProteinConfig(
         pdb_file=str(example_pdb_path),
         width=200,
-        output_prefix=str(tmp_path / "combined"),
+        output_prefix=str(tmp_path / "grouped"),
     )
     image_file = portein.Pymol(
         protein=protein,
         layers=[
-            portein.PymolConfig(representation="cartoon", selection="all", transparency=0.3),
-            portein.PymolConfig(representation="sticks", selection="resn GNP"),
+            [
+                portein.PymolConfig(representation="cartoon", selection="all", transparency=0.3),
+                portein.PymolConfig(representation="sticks", selection="resn GNP"),
+            ],
         ],
-        combine=True,
     ).run()
     assert Path(image_file).exists() and Path(image_file).stat().st_size > 0
 

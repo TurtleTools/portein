@@ -84,17 +84,19 @@ protein_config = portein.ProteinConfig(
     output_prefix=str(output_dir / "7lc2"),
 )
 layers = [
-    portein.PymolConfig(representation="surface", pymol_settings=pymol_settings, transparency=0.5),
-    portein.PymolConfig(representation="cartoon", pymol_settings=pymol_settings),
-    portein.PymolConfig(representation="sticks", pymol_settings=pymol_settings, selection="highlight"),
-    portein.PymolConfig(
-        representation="sticks",
-        pymol_settings=pymol_settings,
-        selection="resn GNP",
-        color="green",
-    ),
+    [
+        portein.PymolConfig(representation="surface", pymol_settings=pymol_settings, transparency=0.5),
+        portein.PymolConfig(representation="cartoon", pymol_settings=pymol_settings),
+        portein.PymolConfig(representation="sticks", pymol_settings=pymol_settings, selection="highlight"),
+        portein.PymolConfig(
+            representation="sticks",
+            pymol_settings=pymol_settings,
+            selection="resn GNP",
+            color="green",
+        ),
+    ],
 ]
-pymol = portein.Pymol(protein=protein_config, layers=layers, buffer=10, combine=True)
+pymol = portein.Pymol(protein=protein_config, layers=layers, buffer=10)
 image_file = pymol.run()
 Image(image_file)
 ```
@@ -130,25 +132,31 @@ protein_config = portein.ProteinConfig(
     output_prefix=str(output_dir / "7lc2_pocket"),
 )
 layers = [
-    portein.PymolConfig(representation="surface", pymol_settings=pymol_settings, transparency=0.3),
-    portein.PymolConfig(representation="cartoon", pymol_settings=pymol_settings),
-    portein.PymolConfig(
-        representation="sticks",
-        pymol_settings=pymol_settings,
-        selection="(chain A and resn GNP)",
-        color="green",
-    ),
+    [
+        portein.PymolConfig(representation="surface", pymol_settings=pymol_settings, transparency=0.3),
+        portein.PymolConfig(representation="cartoon", pymol_settings=pymol_settings),
+        portein.PymolConfig(
+            representation="sticks",
+            pymol_settings=pymol_settings,
+            selection="(chain A and resn GNP)",
+            color="green",
+        ),
+    ],
 ]
-pymol = portein.Pymol(protein=protein_config, layers=layers, combine=True)
+pymol = portein.Pymol(protein=protein_config, layers=layers)
 image_file = pymol.run()
 Image(image_file)
 ```
 
-## Layer compositing: 2D decals vs depth-interleaved (`combine`)
+## Layer compositing
 
-By default, `portein.Pymol` ray-traces each layer separately and alpha-composites the PNGs in PIL. That's the **2D decals** behavior — a later layer always sits "on top" of an earlier layer at every pixel where it isn't transparent, regardless of whether the underlying 3D geometry would be in front or behind. It's the right tool when you want a translucent surface applied uniformly across the whole rendered image, or when your layers' geometries don't overlap in 3D.
+Each entry in `layers` is either a bare `PymolConfig` or a *nested list* of `PymolConfig`s, and that distinction controls how the entry's geometry composites with the rest:
 
-When two layers' geometries *do* overlap and you want PyMOL's z-buffer to interleave them per pixel — the way PyMOL's native `super` command composites two superposed structures — set `combine=True`. All layers go into one PyMOL scene and a single `cmd.ray()` produces the final image. Per-layer `transparency` then becomes a PyMOL per-selection `cartoon_transparency` / `transparency` / `stick_transparency` setting (depth-aware) instead of a flat PIL alpha.
+- **A bare `PymolConfig`** is rendered as its own `cmd.ray()` pass, and its `transparency` becomes a flat 2D PIL alpha across the layer's PNG before alpha-compositing. This is the right tool for elements that should sit uniformly in front of or behind everything else (a translucent cartoon backdrop, a highlight band drawn boldly on top, etc.).
+
+- **A nested `list[PymolConfig]`** packs all the included layers into one shared PyMOL scene and a single `cmd.ray()` call. PyMOL's z-buffer interleaves their geometries per pixel (like what PyMol's native `super` command does for two superposed structures) and each layer's `transparency` becomes a depth-aware per-selection setting (`cartoon_transparency`, `transparency` for surfaces, `stick_transparency`, etc.).
+
+Example:
 
 ```{code-cell} ipython3
 from IPython.display import Image as IpyImage, display
@@ -158,40 +166,63 @@ protein_config = portein.ProteinConfig(
     rotate=True,
     width=600,
     chain_colormap="Set3",
-    output_prefix=str(output_dir / "combine_demo"),
+    output_prefix=str(output_dir / "compositing_demo"),
 )
-layers = [
-    portein.PymolConfig(representation="surface", pymol_settings=pymol_settings, transparency=0.5),
-    portein.PymolConfig(representation="cartoon", pymol_settings=pymol_settings),
-]
 ```
 
 ```{code-cell} ipython3
-# Default (combine=False): the cartoon PNG sits entirely on top of the
-# translucent surface PNG.
+# Two bare layers — each is its own ray-trace, then PIL-composited.
+# The cartoon PNG sits entirely on top of the translucent surface PNG.
 protein_config.output_prefix = str(output_dir / "decals")
-decals_image = portein.Pymol(protein=protein_config, layers=layers).run()
+decals_image = portein.Pymol(
+    protein=protein_config,
+    layers=[
+        portein.PymolConfig(representation="surface", pymol_settings=pymol_settings, transparency=0.5),
+        portein.PymolConfig(representation="cartoon", pymol_settings=pymol_settings),
+    ],
+).run()
 display(IpyImage(decals_image))
 ```
 
 ```{code-cell} ipython3
-# combine=True: one ray-trace. The translucent surface and the cartoon
-# share the z-buffer — the cartoon appears "behind frosted glass" wherever
-# the surface is in front, and unmuted where the cartoon protrudes.
-protein_config.output_prefix = str(output_dir / "combined")
-combined_image = portein.Pymol(protein=protein_config, layers=layers, combine=True).run()
-display(IpyImage(combined_image))
+# One nested-list group — both layers share the same ray-trace.
+# The translucent surface and the cartoon share the z-buffer: the cartoon
+# appears "behind frosted glass" wherever the surface is in front, and
+# unmuted where the cartoon protrudes.
+protein_config.output_prefix = str(output_dir / "grouped")
+grouped_image = portein.Pymol(
+    protein=protein_config,
+    layers=[
+        [
+            portein.PymolConfig(representation="surface", pymol_settings=pymol_settings, transparency=0.5),
+            portein.PymolConfig(representation="cartoon", pymol_settings=pymol_settings),
+        ],
+    ],
+).run()
+display(IpyImage(grouped_image))
 ```
 
-When to pick which:
+When to use which:
 
-| Want | Use |
+| Want | Layer entry |
 |---|---|
-| Uniform 2D translucency over each whole layer | `combine=False` (default) |
-| Depth-correct interleaving of overlapping geometries | `combine=True` |
-| Two superposed structures rendered like PyMOL's `super` | `combine=True` |
-| Surface + sticks where the ligand should occlude correctly | `combine=True` |
-| Highlight layer drawn boldly on top regardless of depth | `combine=False` |
+| Uniform 2D translucency over each whole layer | bare `PymolConfig` |
+| Depth-correct interleaving of overlapping geometries | `[PymolConfig, ...]` |
+| Two superposed structures rendered like PyMOL's `super` | one nested group |
+| Surface + sticks where the ligand should occlude correctly | one nested group |
+| Highlight band drawn boldly on top regardless of depth | bare `PymolConfig` |
+
+You can mix the two in one render — for example, a translucent cartoon as a backdrop (bare) plus a nested group of side-chain + ligand sticks that need to weave through each other:
+
+```python
+layers=[
+    portein.PymolConfig(representation="cartoon", selection="all", transparency=0.5),
+    [
+        portein.PymolConfig(representation="sticks", selection="resi 14+15+16"),
+        portein.PymolConfig(representation="sticks", selection="resn GNP", color="green"),
+    ],
+]
+```
 
 ## From the command line
 

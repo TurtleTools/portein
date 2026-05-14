@@ -1,6 +1,6 @@
 __version__ = "0.0.1"
 
-from portein import color, compare, config, image, plot, rotate, sequence
+from portein import color, compare, config, image, interactions, plot, rotate, sequence
 from portein.color import PLDDT_RANGES, by_plddt
 from portein.compare import superimpose_by_alignment
 from portein.config import (
@@ -13,6 +13,13 @@ from portein.config import (
     read_structure,
 )
 from portein.image import crop_to_content
+from portein.interactions import (
+    HBond,
+    InteractionSet,
+    PiCation,
+    PiStacking,
+    SaltBridge,
+)
 from portein.plot.illustrate import Illustrate
 from portein.plot.image_utils import find_size
 from portein.plot.pymol import Pymol
@@ -58,4 +65,11 @@ __all__ = [
     "PLDDT_RANGES",
     "superimpose_by_alignment",
     "AlignmentPlotter",
+    # interactions
+    "InteractionSet",
+    "HBond",
+    "SaltBridge",
+    "PiCation",
+    "PiStacking",
+    "interactions",
 ]
