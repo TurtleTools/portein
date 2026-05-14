@@ -12,8 +12,6 @@ dependencies:
   - typing-extensions>=4.0
   # Bioinformatics
   - biotite>=0.40
-  # peppr — SMARTS-based protein-ligand interaction detection
-  - peppr>=0.13
   # PyMOL renderer (required for `portein pymol` / portein.Pymol)
   - pymol-open-source
   # DSSP (required for `portein secondary` / portein.SecondaryStructure)
