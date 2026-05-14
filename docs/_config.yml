@@ -50,3 +50,9 @@ sphinx:
       matplotlib: ["https://matplotlib.org/stable", null]
       biotite: ["https://www.biotite-python.org/latest", null]
       peppr: ["https://peppr.proximabio.com", null]
+    # autosummary emits ``:toctree:`` directives that JB1's external-toc
+    # plugin warns about. The warning is cosmetic — the API pages
+    # generate correctly — but `--warningiserror` in CI would fail the
+    # build. Suppress just this one.
+    suppress_warnings:
+      - etoc.toctree

@@ -132,17 +132,17 @@ protein_config = portein.ProteinConfig(
     output_prefix=str(output_dir / "7lc2_pocket"),
 )
 layers = [
+    # Surface as its own layer
+    portein.PymolConfig(representation="surface", pymol_settings=pymol_settings, transparency=0.3),
+    # Cartoon + ligand sticks share one ray-trace so they depth-interleave.
     [
-        portein.PymolConfig(representation="surface", pymol_settings=pymol_settings, transparency=0.3),
-        [
-            portein.PymolConfig(representation="cartoon", pymol_settings=pymol_settings),
-            portein.PymolConfig(
-                representation="sticks",
-                pymol_settings=pymol_settings,
-                selection="(chain A and resn GNP)",
-                color="green",
-            ),
-        ],
+        portein.PymolConfig(representation="cartoon", pymol_settings=pymol_settings),
+        portein.PymolConfig(
+            representation="sticks",
+            pymol_settings=pymol_settings,
+            selection="(chain A and resn GNP)",
+            color="green",
+        ),
     ],
 ]
 pymol = portein.Pymol(protein=protein_config, layers=layers)

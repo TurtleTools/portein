@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.11", "3.12"]
 
     steps:
       - name: Checkout
@@ -34,6 +34,7 @@ jobs:
           init-shell: bash
           cache-environment: true
           cache-downloads: true
+          post-cleanup: none
 
       - name: Show environment
         run: |

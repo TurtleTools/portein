@@ -12,7 +12,7 @@ authors = [
     { name = "Janani Durairaj"},
     { name = "Mehmet Akdel" },
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 classifiers = [
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
@@ -21,7 +21,6 @@ classifiers = [
     "Operating System :: Unix",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
@@ -63,7 +62,7 @@ include = ["portein*"]
 
 [tool.ruff]
 line-length = 120
-target-version = "py310"
+target-version = "py311"
 extend-exclude = ["*.ipynb"]  # README.ipynb is documentation, not source
 
 [tool.ruff.lint]
@@ -81,7 +80,7 @@ select = ["E", "F", "I", "W", "B", "UP"]
 "portein/plot/secondary_structure.py" = ["E501"]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 ignore_missing_imports = true
 warn_unused_ignores = true
 
